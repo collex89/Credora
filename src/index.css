@@ -326,6 +326,22 @@ p {
   animation: slideUp 0.5s ease-out;
 }
 
+/* When a back button is present, the container stops centering everything
+   (that pushed the button down into the middle of an empty screen) --
+   instead the button stays pinned at the top and only the content below it
+   centers in the remaining space. */
+.auth-container.has-topbar {
+  justify-content: flex-start;
+}
+
+.auth-center-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+}
+
 .auth-topbar {
   display: flex;
   align-items: center;

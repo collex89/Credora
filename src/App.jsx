@@ -2350,12 +2350,13 @@ export default function App() {
 
         {/* ------------------ VIEW 2b: AUTH FORM ------------------ */}
         {!splashActive && !isLoggedIn && !passwordRecoveryMode && welcomeStage === 'form' && (
-          <div className="auth-container scrollable animate-fade-in">
+          <div className="auth-container has-topbar scrollable animate-fade-in">
             <div className="auth-topbar">
               <button className="icon-btn" onClick={() => setWelcomeStage('chooser')} aria-label="Back">
                 <Icons.ChevronLeft />
               </button>
             </div>
+            <div className="auth-center-content">
             <div className="auth-header">
               <div className="auth-logo-symbol">
                 <img src="/logo.svg" alt="Crescamus logo" className="brand-logo-img" />
@@ -2505,6 +2506,7 @@ export default function App() {
             {!isSupabaseConfigured && (
               <p className="demo-note">Demo mode — accounts are not saved yet. See SUPABASE_SETUP.md to connect your database.</p>
             )}
+            </div>
           </div>
         )}
 
