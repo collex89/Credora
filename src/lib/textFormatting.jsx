@@ -5,7 +5,38 @@
 // approach never touches dangerouslySetInnerHTML, so there's nothing to
 // sanitize in the first place.
 
-function parseInline(text, keyPrefix) {
+// Splits a plain string on @username tokens, turning each into a clickable
+// span (or leaving it as plain "@text" if no click handler was given, e.g.
+// in a preview that isn't wired to navigation).
+// The boundary group requires @ to not be glued to a preceding letter/digit
+// -- without it, "a@b.com" or "hello@jo" would wrongly read as a mention of
+// "b.com"/"jo" instead of being left alone as an email/word.
+function splitMentions(text, keyPrefix, onMentionClick) {
+  const regex = /(^|[^a-zA-Z0-9])@([a-z0-9._]{3,20})/gi;
+  const out = [];
+  let lastIndex = 0;
+  let match;
+  let i = 0;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) out.push(text.slice(lastIndex, match.index));
+    if (match[1]) out.push(match[1]);
+    const username = match[2].toLowerCase();
+    out.push(
+      <span
+        key={`${keyPrefix}-m-${i++}`}
+        className="mention-link"
+        onClick={onMentionClick ? (e) => { e.stopPropagation(); onMentionClick(username); } : undefined}
+      >
+        @{match[2]}
+      </span>
+    );
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) out.push(text.slice(lastIndex));
+  return out;
+}
+
+function parseInline(text, keyPrefix, onMentionClick) {
   const parts = [];
   const regex = /\*\*(.+?)\*\*|\*(.+?)\*/g;
   let lastIndex = 0;
@@ -21,10 +52,16 @@ function parseInline(text, keyPrefix) {
     lastIndex = regex.lastIndex;
   }
   if (lastIndex < text.length) parts.push(text.slice(lastIndex));
-  return parts;
+
+  return parts.flatMap((part, idx) =>
+    typeof part === 'string' ? splitMentions(part, `${keyPrefix}-${idx}`, onMentionClick) : part
+  );
 }
 
-export function renderFormattedText(text) {
+// onMentionClick(username), if given, is called when a rendered @mention is
+// tapped -- lets the caller navigate to that person's profile without this
+// module needing to know anything about app navigation.
+export function renderFormattedText(text, onMentionClick) {
   if (!text) return null;
   const lines = text.split('\n');
   const blocks = [];
@@ -40,12 +77,12 @@ export function renderFormattedText(text) {
   lines.forEach((line, idx) => {
     if (line.startsWith('> ')) {
       flushList(idx);
-      blocks.push(<blockquote key={`q-${idx}`} className="post-blockquote">{parseInline(line.slice(2), `q${idx}`)}</blockquote>);
+      blocks.push(<blockquote key={`q-${idx}`} className="post-blockquote">{parseInline(line.slice(2), `q${idx}`, onMentionClick)}</blockquote>);
     } else if (line.startsWith('- ')) {
-      listBuffer.push(<li key={`li-${idx}`}>{parseInline(line.slice(2), `li${idx}`)}</li>);
+      listBuffer.push(<li key={`li-${idx}`}>{parseInline(line.slice(2), `li${idx}`, onMentionClick)}</li>);
     } else {
       flushList(idx);
-      blocks.push(<span key={`ln-${idx}`}>{line ? parseInline(line, `ln${idx}`) : ' '}{idx < lines.length - 1 && <br />}</span>);
+      blocks.push(<span key={`ln-${idx}`}>{line ? parseInline(line, `ln${idx}`, onMentionClick) : ' '}{idx < lines.length - 1 && <br />}</span>);
     }
   });
   flushList('end');

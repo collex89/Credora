@@ -368,7 +368,8 @@ const truncate = (text, n = 60) => (text && text.length > n ? `${text.slice(0, n
 const NOTIF_TEXT = {
   like: (post) => `liked your post${post ? `: "${truncate(post)}"` : ''}`,
   comment: (post) => `commented on your post${post ? `: "${truncate(post)}"` : ''}`,
-  follow: () => 'started following you'
+  follow: () => 'started following you',
+  mention: (post) => `mentioned you${post ? `: "${truncate(post)}"` : ''}`
 };
 
 export async function fetchNotifications(userId) {

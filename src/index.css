@@ -2604,6 +2604,11 @@ textarea.form-input {
   color: #7C3AED;
 }
 
+.notification-icon-indicator.mention {
+  background: rgba(234, 88, 12, 0.12);
+  color: #EA580C;
+}
+
 .notification-icon-indicator.prayer {
   background: rgba(22, 163, 74, 0.12);
   color: #16A34A;
@@ -3121,6 +3126,59 @@ textarea.form-input {
 
 .post-bullet-list li {
   margin: 2px 0;
+}
+
+.mention-link {
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mention-link:hover {
+  text-decoration: underline;
+}
+
+.mention-suggestions {
+  position: fixed;
+  z-index: 3000;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  max-height: 220px;
+  overflow-y: auto;
+  min-width: 200px;
+  max-width: 280px;
+}
+
+.mention-suggestion-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.mention-suggestion-row:hover {
+  background: var(--background);
+}
+
+.mention-suggestion-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.mention-suggestion-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mention-suggestion-username {
+  font-size: 11px;
+  color: var(--text-secondary);
 }
 
 /* ----------------------------------------------------

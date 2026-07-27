@@ -292,6 +292,11 @@ const Icons = {
       <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>
     </svg>
   ),
+  AtSign: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4"/><path d="M16 12v1.5a2.5 2.5 0 0 0 5 0V12a9 9 0 1 0-5.5 8.28"/>
+    </svg>
+  ),
   SkipBack: () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none">
       <polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -616,6 +621,11 @@ export default function App() {
   const [activePostId, setActivePostId] = useState(null); // postId whose detail view is open
   const [feedRefreshing, setFeedRefreshing] = useState(false);
   const mainScrollRef = useRef(null);
+
+  // @mention autocomplete -- one shared dropdown, driven by whichever
+  // post/comment input the user is currently typing an @mention into.
+  // { query, rect, tokenStart, cursorPos, el, value, setValue } | null
+  const [mentionState, setMentionState] = useState(null);
 
   // Search States
   const [searchQuery, setSearchQuery] = useState('');
@@ -1097,6 +1107,54 @@ export default function App() {
     })
   });
 
+  // Called from the onChange of every mention-enabled post/comment input.
+  // Looks at the text right before the cursor; if it ends in a partial
+  // "@word" token, opens the shared suggestion dropdown anchored under
+  // that specific input. One piece of state serves every input in the
+  // app since only one can be focused (and typing an @mention) at a time.
+  const updateMentionState = (el, value, setValue) => {
+    const pos = el.selectionStart;
+    const uptoCursor = value.slice(0, pos);
+    const match = uptoCursor.match(/(?:^|\s)@([a-z0-9._]{0,20})$/i);
+    if (!match) {
+      setMentionState(null);
+      return;
+    }
+    setMentionState({
+      query: match[1].toLowerCase(),
+      rect: el.getBoundingClientRect(),
+      tokenStart: pos - match[1].length - 1,
+      cursorPos: pos,
+      el,
+      value,
+      setValue
+    });
+  };
+
+  const mentionSuggestions = mentionState
+    ? users.filter(u => u.username.startsWith(mentionState.query)).slice(0, 5)
+    : [];
+
+  // Replaces the partial @token being typed with the chosen username, then
+  // restores focus and the cursor to right after it.
+  const applyMention = (username) => {
+    if (!mentionState) return;
+    const { el, value, setValue, tokenStart, cursorPos } = mentionState;
+    // Only add a trailing space when there isn't already one right after the
+    // token -- otherwise completing a mention in the middle of existing text
+    // (e.g. "Hi @jo| how are you") would leave a double space behind.
+    const nextChar = value[cursorPos];
+    const insertion = `@${username}${nextChar === ' ' || nextChar === '\n' ? '' : ' '}`;
+    const newValue = `${value.slice(0, tokenStart)}${insertion}${value.slice(cursorPos)}`;
+    setValue(newValue);
+    setMentionState(null);
+    requestAnimationFrame(() => {
+      el.focus();
+      const newPos = tokenStart + insertion.length;
+      el.setSelectionRange(newPos, newPos);
+    });
+  };
+
   // As with likes/bookmarks above, `postId` is always the underlying
   // original post's id so comments stay in sync across every feed entry
   // (original + any reshares) that displays that same post.
@@ -1208,8 +1266,13 @@ export default function App() {
             className="comment-input"
             placeholder={`Reply to ${comment.user}...`}
             value={replyInputs[comment.id] || ''}
-            onChange={(e) => setReplyInputs({ ...replyInputs, [comment.id]: e.target.value })}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleAddReply(postId, comment.id); }}
+            onChange={(e) => {
+              const v = e.target.value;
+              setReplyInputs({ ...replyInputs, [comment.id]: v });
+              updateMentionState(e.target, v, (nv) => setReplyInputs(prev => ({ ...prev, [comment.id]: nv })));
+            }}
+            onBlur={() => setMentionState(null)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !mentionState) handleAddReply(postId, comment.id); }}
             autoFocus
           />
           <button className="comment-submit-btn" onClick={() => handleAddReply(postId, comment.id)}>
@@ -1325,7 +1388,7 @@ export default function App() {
         </div>
       </div>
 
-      <div className="feed-text" onClick={() => setActivePostId(post.id)} style={{ cursor: 'pointer' }}>{renderFormattedText(post.text)}</div>
+      <div className="feed-text" onClick={() => setActivePostId(post.id)} style={{ cursor: 'pointer' }}>{renderFormattedText(post.text, openPersonProfile)}</div>
       {post.video && <video src={post.video} className="feed-image" controls playsInline />}
       {post.image && <img src={post.image} className="feed-image" alt="post content" onClick={() => setActivePostId(post.id)} style={{ cursor: 'pointer' }} />}
 
@@ -1407,8 +1470,13 @@ export default function App() {
               className="comment-input"
               placeholder="Share your reflection..."
               value={commentInputs[post.originalPostId] || ''}
-              onChange={(e) => setCommentInputs({ ...commentInputs, [post.originalPostId]: e.target.value })}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleAddComment(post.originalPostId); }}
+              onChange={(e) => {
+                const v = e.target.value;
+                setCommentInputs({ ...commentInputs, [post.originalPostId]: v });
+                updateMentionState(e.target, v, (nv) => setCommentInputs(prev => ({ ...prev, [post.originalPostId]: nv })));
+              }}
+              onBlur={() => setMentionState(null)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !mentionState) handleAddComment(post.originalPostId); }}
             />
             <button className="comment-submit-btn" onClick={() => handleAddComment(post.originalPostId)}>
               <Icons.ArrowRight />
@@ -2205,6 +2273,31 @@ export default function App() {
         onEnded={onTrackEnded}
       />
 
+      {/* @MENTION AUTOCOMPLETE -- one shared dropdown for every post/comment
+          input in the app (see mentionState/updateMentionState/applyMention).
+          position: fixed so it escapes .device-container's overflow:hidden
+          and anchors to the input's real on-screen position. */}
+      {mentionState && mentionSuggestions.length > 0 && (
+        <div
+          className="mention-suggestions"
+          style={{ top: mentionState.rect.bottom + 4, left: mentionState.rect.left }}
+        >
+          {mentionSuggestions.map(u => (
+            <div
+              key={u.id}
+              className="mention-suggestion-row"
+              onMouseDown={(e) => { e.preventDefault(); applyMention(u.username); }}
+            >
+              <img src={u.avatar} alt={u.name} className="mention-suggestion-avatar" />
+              <div>
+                <div className="mention-suggestion-name">{u.name}</div>
+                <div className="mention-suggestion-username">@{u.username}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="app-container">
         {/* ------------------ VIEW 1: SPLASH SCREEN ------------------ */}
         {splashActive && (
@@ -2585,7 +2678,7 @@ export default function App() {
                         setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, unread: false } : n));
                         setNotificationsOpen(false);
 
-                        if ((notif.type === 'like' || notif.type === 'comment') && notif.postId) {
+                        if ((notif.type === 'like' || notif.type === 'comment' || notif.type === 'mention') && notif.postId) {
                           setActiveTab('home');
                           setSubView(null);
                           setActivePostId(notif.postId);
@@ -2596,6 +2689,7 @@ export default function App() {
                         <div className={`notification-icon-indicator ${notif.type}`}>
                           {notif.type === 'like' && <Icons.Heart />}
                           {notif.type === 'comment' && <Icons.Comment />}
+                          {notif.type === 'mention' && <Icons.AtSign />}
                           {notif.type === 'prayer' && <Icons.Rosary />}
                           {notif.type === 'saint' && <Icons.Sparkles />}
                           {notif.type === 'follow' && <Icons.Users />}
@@ -3054,7 +3148,8 @@ export default function App() {
                         className="composer-textarea"
                         placeholder="Share your faith with the community..."
                         value={newPostText}
-                        onChange={(e) => setNewPostText(e.target.value)}
+                        onChange={(e) => { setNewPostText(e.target.value); updateMentionState(e.target, e.target.value, setNewPostText); }}
+                        onBlur={() => setMentionState(null)}
                         autoFocus
                         rows={6}
                       />
@@ -3402,7 +3497,7 @@ export default function App() {
                         <span className="feed-time">{detailPost.time}</span>
                       </div>
 
-                      <div className="feed-text post-detail-text">{renderFormattedText(detailPost.text)}</div>
+                      <div className="feed-text post-detail-text">{renderFormattedText(detailPost.text, openPersonProfile)}</div>
                       {detailPost.video && <video src={detailPost.video} className="feed-image" controls playsInline />}
                       {detailPost.image && <img src={detailPost.image} className="feed-image" alt="post content" />}
 
@@ -3488,8 +3583,13 @@ export default function App() {
                       className="comment-input"
                       placeholder="Share your reflection..."
                       value={commentInputs[detailPost.originalPostId] || ''}
-                      onChange={(e) => setCommentInputs({ ...commentInputs, [detailPost.originalPostId]: e.target.value })}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleAddComment(detailPost.originalPostId); }}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setCommentInputs({ ...commentInputs, [detailPost.originalPostId]: v });
+                        updateMentionState(e.target, v, (nv) => setCommentInputs(prev => ({ ...prev, [detailPost.originalPostId]: nv })));
+                      }}
+                      onBlur={() => setMentionState(null)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && !mentionState) handleAddComment(detailPost.originalPostId); }}
                     />
                     <button className="comment-submit-btn" onClick={() => handleAddComment(detailPost.originalPostId)}>
                       <Icons.ArrowRight />
@@ -4317,7 +4417,7 @@ export default function App() {
                               <span style={{ fontWeight: 600, fontSize: '12px' }}>{post.user.name}</span>
                               <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{post.time}</span>
                             </div>
-                            <div style={{ fontSize: '12.5px', color: 'var(--text)' }}>{renderFormattedText(post.text)}</div>
+                            <div style={{ fontSize: '12.5px', color: 'var(--text)' }}>{renderFormattedText(post.text, openPersonProfile)}</div>
                           </div>
                         ))
                       )}
