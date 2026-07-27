@@ -452,6 +452,14 @@ const Icons = {
 export default function App() {
   // Splash & Auth States
   const [splashActive, setSplashActive] = useState(true);
+  const [splashMinElapsed, setSplashMinElapsed] = useState(false);
+  // Whether we've actually resolved a persisted session one way or the
+  // other -- true right away in demo mode (nothing to check), but in live
+  // mode only once getSession() found no session, or once a found session's
+  // profile has fully loaded. Keeps the splash up instead of letting a
+  // returning user flash past the Welcome/sign-in screens on a slow
+  // connection while their real session is still loading in the background.
+  const [authKnown, setAuthKnown] = useState(!isSupabaseConfigured);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
   const [welcomeStage, setWelcomeStage] = useState('hero'); // 'hero' | 'chooser' | 'form'
@@ -640,13 +648,24 @@ export default function App() {
   const audioRef = useRef(null);
   const sleepTimerRef = useRef(null);
 
-  // 1. Splash fadeout effect
+  // 1. Splash fadeout effect -- a 2s minimum so the branding always shows,
+  // plus an 8s failsafe so a hung network request can never leave someone
+  // stuck on the splash screen forever (see the splashMinElapsed/authKnown
+  // effect below for the normal, sooner path off the splash).
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setSplashActive(false);
-    }, 2000);
-    return () => clearTimeout(timer);
+    const minTimer = setTimeout(() => setSplashMinElapsed(true), 2000);
+    const maxTimer = setTimeout(() => setSplashActive(false), 8000);
+    return () => { clearTimeout(minTimer); clearTimeout(maxTimer); };
   }, []);
+
+  // Only actually drop the splash once both the minimum branding time has
+  // passed AND we know the real auth state -- otherwise a returning user
+  // on a slow connection would see the splash end into the Welcome/sign-in
+  // screens for a moment before their restored session finishes loading
+  // and swaps them into the real app underneath.
+  useEffect(() => {
+    if (splashMinElapsed && authKnown) setSplashActive(false);
+  }, [splashMinElapsed, authKnown]);
 
   // 2. Synchronize theme styling variables
   useEffect(() => {
@@ -679,7 +698,14 @@ export default function App() {
   // 2b. Track the Supabase auth session (live mode only)
   useEffect(() => {
     if (!isSupabaseConfigured) return;
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      // No persisted session to restore -- nothing left to wait on, so the
+      // splash can hand off to the Welcome screen as soon as its minimum
+      // time is up. If there IS a session, authKnown instead waits for 2c
+      // below to finish loading the profile.
+      if (!data.session) setAuthKnown(true);
+    });
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       // Clicking the emailed reset link lands here with a special recovery
@@ -743,6 +769,7 @@ export default function App() {
       setBlocks(myBlocks);
       setMutedUserIds(new Set(myMutes));
       setIsLoggedIn(true);
+      setAuthKnown(true);
     })();
     return () => { cancelled = true; };
   }, [session]);
