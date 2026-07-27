@@ -376,7 +376,7 @@ export async function fetchNotifications(userId) {
   const { data, error } = await supabase
     .from('notifications')
     .select(`
-      id, type, read, created_at, post_id,
+      id, type, read, created_at, post_id, comment_id,
       actor:profiles!notifications_actor_id_fkey (username, full_name, avatar_url),
       post:posts (text)
     `)
@@ -391,6 +391,7 @@ export async function fetchNotifications(userId) {
     user: displayName(n.actor),
     actorUsername: n.actor?.username || null,
     postId: n.post_id || null,
+    commentId: n.comment_id || null,
     text: NOTIF_TEXT[n.type](n.post?.text),
     time: timeAgo(n.created_at),
     unread: !n.read

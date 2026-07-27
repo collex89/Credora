@@ -1195,6 +1195,19 @@ p {
   border-top: 1px dashed var(--border);
 }
 
+/* Briefly flashes the exact comment a notification pointed at, so it's
+   findable at a glance in a long thread instead of just landing on the
+   post and leaving the reader to scroll and search for it. */
+.comment-highlight {
+  animation: commentHighlightFlash 2s ease-out;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes commentHighlightFlash {
+  0%, 40% { background: rgba(var(--primary-rgb), 0.14); }
+  100% { background: transparent; }
+}
+
 .comment-reply-btn {
   background: none;
   border: none;

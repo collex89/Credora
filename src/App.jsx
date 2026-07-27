@@ -619,6 +619,7 @@ export default function App() {
   const [replyingTo, setReplyingTo] = useState(null); // commentId whose reply box is open, or null
   const [replyInputs, setReplyInputs] = useState({}); // commentId -> draft reply text
   const [activePostId, setActivePostId] = useState(null); // postId whose detail view is open
+  const [scrollToCommentId, setScrollToCommentId] = useState(null); // set alongside activePostId when a notification points at a specific comment
   const [feedRefreshing, setFeedRefreshing] = useState(false);
   const mainScrollRef = useRef(null);
 
@@ -868,6 +869,20 @@ export default function App() {
       audioRef.current.playbackRate = playbackRate;
     }
   }, [playbackRate]);
+
+  // Jumps to the exact comment a notification pointed at, once the post
+  // detail view (which renders detailPost.comments synchronously from
+  // already-loaded state -- no async fetch to wait on) has painted it.
+  useEffect(() => {
+    if (!activePostId || !scrollToCommentId) return;
+    const el = document.querySelector(`[data-comment-id="${scrollToCommentId}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('comment-highlight');
+      setTimeout(() => el.classList.remove('comment-highlight'), 2000);
+    }
+    setScrollToCommentId(null);
+  }, [activePostId, scrollToCommentId]);
 
   // Sleep Timer Counter
   useEffect(() => {
@@ -1237,7 +1252,7 @@ export default function App() {
   // view — a top-level comment plus its one level of replies, a reply
   // button, and (when open) that comment's reply input.
   const renderCommentThread = (postId, comment) => (
-    <div key={comment.id} className="comment-thread">
+    <div key={comment.id} className="comment-thread" data-comment-id={comment.id}>
       <div className="comment-row-likeable">
         <span>
           <span className="comment-user">{comment.user}</span>
@@ -1284,7 +1299,7 @@ export default function App() {
       {comment.replies && comment.replies.length > 0 && (
         <div className="comment-replies">
           {comment.replies.map(reply => (
-            <div key={reply.id} className="comment-row-likeable comment-reply-row">
+            <div key={reply.id} className="comment-row-likeable comment-reply-row" data-comment-id={reply.id}>
               <span>
                 <span className="comment-user">{reply.user}</span>
                 {reply.userIsVerified && <Icons.Verified size={11} />}
@@ -2682,6 +2697,7 @@ export default function App() {
                           setActiveTab('home');
                           setSubView(null);
                           setActivePostId(notif.postId);
+                          setScrollToCommentId(notif.commentId || null);
                         } else if (notif.type === 'follow' && notif.actorUsername) {
                           openPersonProfile(notif.actorUsername);
                         }
