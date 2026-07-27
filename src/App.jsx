@@ -526,6 +526,7 @@ export default function App() {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState('');
   const [profileTab, setProfileTab] = useState('posts'); // 'posts' | 'reshares' | 'bookmarks'
+  const [personProfileTab, setPersonProfileTab] = useState('posts'); // 'posts' | 'reshares' -- someone else's profile (no Bookmarks tab, that's private)
 
   // Direct Messages States (live mode populates this once the real session loads)
   const [conversations, setConversations] = useState([]);
@@ -1871,6 +1872,7 @@ export default function App() {
     if (!person) return;
     setActivePerson(person.id);
     setSubView('person');
+    setPersonProfileTab('posts'); // always start on Posts, not whatever tab the last profile visited was left on
   };
 
   // Accepts either a community-list user ({id, name, username, avatar}) or
@@ -2140,11 +2142,6 @@ export default function App() {
   });
   const visibleUsers = users.filter(u => !blockedUserIds.has(u.id));
   const unreadNotificationCount = notifications.filter(n => n.unread).length;
-
-  // A profile's post grid is everything they wrote plus everything they
-  // reshared — not just posts where they're the original author.
-  const belongsToProfile = (post, username) =>
-    (post.user.username === username && !post.resharedBy) || post.resharedBy?.username === username;
 
   // 7. Universal Search Logic
   const getSearchResults = () => {
@@ -2884,7 +2881,8 @@ export default function App() {
             {subView === 'person' && activePerson && (() => {
               const person = users.find(u => u.id === activePerson);
               if (!person) return null;
-              const personPosts = posts.filter(p => belongsToProfile(p, person.username));
+              const personPosts = posts.filter(p => p.user.username === person.username && !p.resharedBy);
+              const personReshares = posts.filter(p => p.resharedBy?.username === person.username);
               return (
                 <div className="saint-details-view person-view">
                   <div className="person-view-header">
@@ -2968,17 +2966,35 @@ export default function App() {
                       )}
                     </div>
 
-                    <h4 style={{ fontSize: '13px', margin: '8px 0 12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
-                      Posts
-                    </h4>
-
-                    {personPosts.length === 0 ? (
-                      <div className="search-empty-state">
-                        <span className="empty-state-icon"><Icons.Comment /></span>
-                        <p>No posts shared yet.</p>
+                    <div className="profile-tabs-header">
+                      <div className={`profile-tab-title ${personProfileTab === 'posts' ? 'active' : ''}`} onClick={() => setPersonProfileTab('posts')}>
+                        Posts
                       </div>
-                    ) : (
-                      personPosts.map(post => renderPostCard(post))
+                      <div className={`profile-tab-title ${personProfileTab === 'reshares' ? 'active' : ''}`} onClick={() => setPersonProfileTab('reshares')}>
+                        Reshares
+                      </div>
+                    </div>
+
+                    {personProfileTab === 'posts' && (
+                      personPosts.length === 0 ? (
+                        <div className="search-empty-state">
+                          <span className="empty-state-icon"><Icons.Comment /></span>
+                          <p>No posts shared yet.</p>
+                        </div>
+                      ) : (
+                        personPosts.map(post => renderPostCard(post))
+                      )
+                    )}
+
+                    {personProfileTab === 'reshares' && (
+                      personReshares.length === 0 ? (
+                        <div className="search-empty-state">
+                          <span className="empty-state-icon"><Icons.Repost /></span>
+                          <p>Posts this person reshares will show up here.</p>
+                        </div>
+                      ) : (
+                        personReshares.map(post => renderPostCard(post))
+                      )
                     )}
                   </div>
                 </div>
