@@ -301,6 +301,24 @@ export async function pinPost(postId, pinned) {
   return supabase.from('posts').update({ pinned_at: pinned ? new Date().toISOString() : null }).eq('id', postId);
 }
 
+// ------------------------------------------------------ bible highlights
+
+// Returned as "bookId:chapter:verse" strings -- the same key format the
+// reader already uses locally to check whether a given verse is highlighted.
+export async function fetchBibleHighlights(userId) {
+  const { data, error } = await supabase.from('bible_highlights').select('book_id, chapter, verse').eq('user_id', userId);
+  if (error) return [];
+  return data.map(h => `${h.book_id}:${h.chapter}:${h.verse}`);
+}
+
+export async function addBibleHighlight(userId, bookId, chapter, verse) {
+  return supabase.from('bible_highlights').insert({ user_id: userId, book_id: bookId, chapter, verse });
+}
+
+export async function removeBibleHighlight(userId, bookId, chapter, verse) {
+  return supabase.from('bible_highlights').delete().match({ user_id: userId, book_id: bookId, chapter, verse });
+}
+
 // -------------------------------------------------------------- mutes
 
 export async function fetchMutes(myId) {

@@ -570,7 +570,7 @@ export default function App() {
   const [selectedChapter, setSelectedChapter] = useState(1);
   const [bibleTab, setBibleTab] = useState('NT'); // 'OT' | 'NT'
   const [bibleBookmarks] = useState(['mat:1:1']);
-  const [bibleHighlights, setBibleHighlights] = useState(['mat:1:18']);
+  const [bibleHighlights, setBibleHighlights] = useState([]);
   const [verseModeActive, setVerseModeActive] = useState(false);
   const [chapterGridBook, setChapterGridBook] = useState(null); // book awaiting a chapter pick
   const [chapterVerses, setChapterVerses] = useState([]);
@@ -731,7 +731,7 @@ export default function App() {
     let cancelled = false;
     (async () => {
       const profile = await api.fetchMyProfile(session.user.id);
-      const [community, feed, followerCount, notifs, convos, unreadMsgs, logs, intentions, myBlocks, myMutes] = await Promise.all([
+      const [community, feed, followerCount, notifs, convos, unreadMsgs, logs, intentions, myBlocks, myMutes, highlights] = await Promise.all([
         api.fetchCommunity(session.user.id),
         api.fetchFeed(session.user.id),
         api.fetchMyFollowerCount(session.user.id),
@@ -741,7 +741,8 @@ export default function App() {
         api.fetchPrayerLogs(session.user.id),
         api.fetchPrayerIntentions(session.user.id),
         api.fetchBlocks(session.user.id),
-        api.fetchMutes(session.user.id)
+        api.fetchMutes(session.user.id),
+        api.fetchBibleHighlights(session.user.id)
       ]);
       if (cancelled) return;
       if (profile) {
@@ -773,6 +774,7 @@ export default function App() {
       setPersonalPrayers(intentions);
       setBlocks(myBlocks);
       setMutedUserIds(new Set(myMutes));
+      setBibleHighlights(highlights);
       setIsLoggedIn(true);
       setAuthKnown(true);
     })();
@@ -2179,12 +2181,20 @@ export default function App() {
     }
   };
 
-  // Format Helper for Large Verses View
+  // Toggles a verse highlight -- persisted server-side (migration 021) so
+  // it's still there next time, not just for the current session.
   const handleVerseClick = (verseKey) => {
-    if (bibleHighlights.includes(verseKey)) {
-      setBibleHighlights(prev => prev.filter(k => k !== verseKey));
-    } else {
-      setBibleHighlights(prev => [...prev, verseKey]);
+    const [bookId, chapterStr, verseStr] = verseKey.split(':');
+    const chapter = Number(chapterStr);
+    const verseNum = Number(verseStr);
+    const wasHighlighted = bibleHighlights.includes(verseKey);
+    setBibleHighlights(prev => wasHighlighted ? prev.filter(k => k !== verseKey) : [...prev, verseKey]);
+    if (isSupabaseConfigured && session) {
+      if (wasHighlighted) {
+        api.removeBibleHighlight(session.user.id, bookId, chapter, verseNum).catch(() => {});
+      } else {
+        api.addBibleHighlight(session.user.id, bookId, chapter, verseNum).catch(() => {});
+      }
     }
   };
 
