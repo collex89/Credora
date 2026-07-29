@@ -194,6 +194,8 @@ const mapPost = (row, myId, bookmarkedIds) => ({
   originalPostId: row.id,
   createdAt: row.created_at,
   resharedBy: null,
+  isPinned: !!row.pinned_at,
+  pinnedAt: row.pinned_at || null,
   user: {
     name: displayName(row.author),
     username: row.author?.username || '',
@@ -229,7 +231,7 @@ const mapPost = (row, myId, bookmarkedIds) => ({
 // embeds the full original post in exactly this shape so mapPost() can be
 // reused for both.
 const POST_SELECT = `
-  id, text, image_url, video_url, created_at,
+  id, text, image_url, video_url, created_at, pinned_at,
   author:profiles!posts_author_id_fkey (id, username, full_name, parish, avatar_url, is_verified),
   likes (user_id),
   reshares (user_id),
@@ -290,6 +292,13 @@ export async function createPost(text, imageUrl = null, videoUrl = null) {
 
 export async function updatePost(postId, text) {
   return supabase.from('posts').update({ text }).eq('id', postId);
+}
+
+// The 2-pin cap is enforced server-side by a DB trigger (see migration
+// 020) -- this can still fail if a race lets a client get past the local
+// count check, so callers should expect it might reject.
+export async function pinPost(postId, pinned) {
+  return supabase.from('posts').update({ pinned_at: pinned ? new Date().toISOString() : null }).eq('id', postId);
 }
 
 // -------------------------------------------------------------- mutes

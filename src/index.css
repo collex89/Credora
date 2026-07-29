@@ -3236,6 +3236,26 @@ textarea.form-input {
   background: var(--background);
 }
 
+.post-menu-item.disabled {
+  color: var(--text-secondary);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.post-menu-item.disabled:hover {
+  background: none;
+}
+
+.pinned-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 10px;
+}
+
 .post-menu-item.danger {
   color: var(--notification);
 }

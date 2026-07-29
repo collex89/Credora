@@ -292,6 +292,11 @@ const Icons = {
       <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>
     </svg>
   ),
+  Pin: ({ fill }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={fill ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 17v5"/><path d="M9 3h6l1 6 3 3v2H5v-2l3-3z"/>
+    </svg>
+  ),
   AtSign: () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="4"/><path d="M16 12v1.5a2.5 2.5 0 0 0 5 0V12a9 9 0 1 0-5.5 8.28"/>
@@ -1351,8 +1356,11 @@ export default function App() {
   // the exact same like/comment/reshare/share treatment no matter where it's
   // viewed from -- previously the profile tab had its own stripped-down copy
   // with static counts and no working actions.
-  const renderPostCard = (post) => (
+  const renderPostCard = (post, { showPinnedBadge = false } = {}) => (
     <div key={post.id} className="card">
+      {showPinnedBadge && post.isPinned && (
+        <div className="pinned-badge"><Icons.Pin fill /> Pinned</div>
+      )}
       {post.resharedBy && (
         <div className="reshare-banner">
           <Icons.Repost /> {post.resharedBy.username === myUsername ? 'You' : post.resharedBy.name} reshared
@@ -1396,6 +1404,15 @@ export default function App() {
                   </button>
                 ) : post.user.username === myUsername ? (
                   <>
+                    {!post.isPinned && myPinnedCount >= 2 ? (
+                      <div className="post-menu-item disabled" title="Unpin another post first -- max 2 pinned posts">
+                        <Icons.Pin /> Pin to Profile
+                      </div>
+                    ) : (
+                      <button className="post-menu-item" onClick={() => handleTogglePin(post)}>
+                        <Icons.Pin fill={post.isPinned} /> {post.isPinned ? 'Unpin from Profile' : 'Pin to Profile'}
+                      </button>
+                    )}
                     <button className="post-menu-item" onClick={() => openEditPost(post)}>
                       <Icons.Edit /> Edit Post
                     </button>
@@ -1665,6 +1682,27 @@ export default function App() {
     setPosts(prev => prev.filter(p => p.originalPostId !== postId));
     if (isSupabaseConfigured && session) {
       api.deletePost(postId).catch(() => {});
+    }
+  };
+
+  // Max 2 pinned posts -- enforced here for immediate UI feedback (the menu
+  // item disables itself once you're at the cap) and again server-side by a
+  // DB trigger, since a client-side check alone couldn't stop a second tab
+  // or a replayed request from sneaking past it.
+  const myPinnedCount = posts.filter(p => p.user.username === myUsername && !p.resharedBy && p.isPinned).length;
+
+  const handleTogglePin = (post) => {
+    setPostMenuOpen(null);
+    const pinning = !post.isPinned;
+    if (pinning && myPinnedCount >= 2) return;
+    const pinnedAt = pinning ? new Date().toISOString() : null;
+    // Every feed entry sharing this original post (the post itself, and any
+    // reshares of it) embeds the same underlying post data, so all of them
+    // need updating together -- same reasoning as the like/comment sync
+    // elsewhere.
+    setPosts(prev => prev.map(p => p.originalPostId === post.originalPostId ? { ...p, isPinned: pinning, pinnedAt } : p));
+    if (isSupabaseConfigured && session) {
+      api.pinPost(post.originalPostId, pinning).catch(() => {});
     }
   };
 
@@ -2908,7 +2946,9 @@ export default function App() {
             {subView === 'person' && activePerson && (() => {
               const person = users.find(u => u.id === activePerson);
               if (!person) return null;
-              const personPosts = posts.filter(p => p.user.username === person.username && !p.resharedBy);
+              const personPosts = posts
+                .filter(p => p.user.username === person.username && !p.resharedBy)
+                .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
               const personReshares = posts.filter(p => p.resharedBy?.username === person.username);
               return (
                 <div className="saint-details-view person-view">
@@ -3009,7 +3049,7 @@ export default function App() {
                           <p>No posts shared yet.</p>
                         </div>
                       ) : (
-                        personPosts.map(post => renderPostCard(post))
+                        personPosts.map(post => renderPostCard(post, { showPinnedBadge: true }))
                       )
                     )}
 
@@ -4436,18 +4476,23 @@ export default function App() {
                     </div>
                   </div>
 
-                  {profileTab === 'posts' && (
-                    <div>
-                      {posts.filter(p => p.user.username === myUsername && !p.resharedBy).length === 0 ? (
-                        <div className="search-empty-state">
-                          <span className="empty-state-icon"><Icons.Comment /></span>
-                          <p>You haven't shared anything yet. Tap the + on Home to post.</p>
-                        </div>
-                      ) : (
-                        posts.filter(p => p.user.username === myUsername && !p.resharedBy).map(post => renderPostCard(post))
-                      )}
-                    </div>
-                  )}
+                  {profileTab === 'posts' && (() => {
+                    const myPosts = posts
+                      .filter(p => p.user.username === myUsername && !p.resharedBy)
+                      .sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+                    return (
+                      <div>
+                        {myPosts.length === 0 ? (
+                          <div className="search-empty-state">
+                            <span className="empty-state-icon"><Icons.Comment /></span>
+                            <p>You haven't shared anything yet. Tap the + on Home to post.</p>
+                          </div>
+                        ) : (
+                          myPosts.map(post => renderPostCard(post, { showPinnedBadge: true }))
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {profileTab === 'reshares' && (
                     <div>
