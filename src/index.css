@@ -3246,7 +3246,7 @@ textarea.form-input {
   background: none;
 }
 
-.pinned-badge {
+.post-pinned-badge {
   display: flex;
   align-items: center;
   gap: 6px;

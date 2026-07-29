@@ -1359,7 +1359,7 @@ export default function App() {
   const renderPostCard = (post, { showPinnedBadge = false } = {}) => (
     <div key={post.id} className="card">
       {showPinnedBadge && post.isPinned && (
-        <div className="pinned-badge"><Icons.Pin fill /> Pinned</div>
+        <div className="post-pinned-badge"><Icons.Pin fill /> Pinned</div>
       )}
       {post.resharedBy && (
         <div className="reshare-banner">
@@ -4184,19 +4184,33 @@ export default function App() {
                     </div>
                   ) : (
                     <div>
-                      {/* Books Selection Grid */}
-                      <div className="books-grid">
-                        {BIBLE_BOOKS.filter(b => b.testament === bibleTab).map(book => (
-                          <div
-                            key={book.id}
-                            className="book-card"
-                            onClick={() => setChapterGridBook(book)}
-                          >
-                            <span className="book-card-name">{book.name}</span>
-                            <span className="book-card-meta">{book.chapters} Chapters • {book.category}</span>
+                      {/* Books Selection Grid -- grouped by category (in the
+                          order they already appear in BIBLE_BOOKS, which
+                          follows standard Catholic canon order) so sections
+                          like Deuterocanonical have their own clearly
+                          labeled heading instead of being mixed anonymously
+                          into one long flat list. */}
+                      {(() => {
+                        const books = BIBLE_BOOKS.filter(b => b.testament === bibleTab);
+                        const categories = [...new Set(books.map(b => b.category))];
+                        return categories.map(category => (
+                          <div key={category}>
+                            <h4 className="settings-section-title">{category}</h4>
+                            <div className="books-grid">
+                              {books.filter(b => b.category === category).map(book => (
+                                <div
+                                  key={book.id}
+                                  className="book-card"
+                                  onClick={() => setChapterGridBook(book)}
+                                >
+                                  <span className="book-card-name">{book.name}</span>
+                                  <span className="book-card-meta">{book.chapters} Chapters</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        ))}
-                      </div>
+                        ));
+                      })()}
                     </div>
                   )}
                 </div>
