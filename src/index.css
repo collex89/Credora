@@ -1370,6 +1370,10 @@ p {
 }
 
 .verse-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 12px;
   position: relative;
   padding-left: 6px;
@@ -1380,6 +1384,10 @@ p {
 .verse-item.highlighted {
   background-color: rgba(var(--secondary-rgb), 0.15);
   border-color: var(--secondary);
+}
+
+.verse-text-group {
+  flex: 1;
 }
 
 .verse-number {
@@ -1394,6 +1402,28 @@ p {
 .verse-content {
   font-size: var(--bible-font-size, 16px);
   color: var(--text);
+}
+
+.verse-bookmark-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  opacity: 0.35;
+  cursor: pointer;
+  padding: 2px;
+  flex-shrink: 0;
+  transition: var(--transition);
+}
+
+.verse-bookmark-btn:hover,
+.verse-bookmark-btn.active {
+  opacity: 1;
+  color: var(--secondary);
+}
+
+.verse-bookmark-btn svg {
+  width: 15px;
+  height: 15px;
 }
 
 /* Bible book list */

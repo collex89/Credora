@@ -569,7 +569,7 @@ export default function App() {
   const [selectedBook, setSelectedBook] = useState(BIBLE_BOOKS.find(b => b.id === 'mat')); // Matthew default
   const [selectedChapter, setSelectedChapter] = useState(1);
   const [bibleTab, setBibleTab] = useState('NT'); // 'OT' | 'NT'
-  const [bibleBookmarks] = useState(['mat:1:1']);
+  const [bibleBookmarks, setBibleBookmarks] = useState([]);
   const [bibleHighlights, setBibleHighlights] = useState([]);
   const [verseModeActive, setVerseModeActive] = useState(false);
   const [chapterGridBook, setChapterGridBook] = useState(null); // book awaiting a chapter pick
@@ -731,7 +731,7 @@ export default function App() {
     let cancelled = false;
     (async () => {
       const profile = await api.fetchMyProfile(session.user.id);
-      const [community, feed, followerCount, notifs, convos, unreadMsgs, logs, intentions, myBlocks, myMutes, highlights] = await Promise.all([
+      const [community, feed, followerCount, notifs, convos, unreadMsgs, logs, intentions, myBlocks, myMutes, highlights, bookmarks] = await Promise.all([
         api.fetchCommunity(session.user.id),
         api.fetchFeed(session.user.id),
         api.fetchMyFollowerCount(session.user.id),
@@ -742,7 +742,8 @@ export default function App() {
         api.fetchPrayerIntentions(session.user.id),
         api.fetchBlocks(session.user.id),
         api.fetchMutes(session.user.id),
-        api.fetchBibleHighlights(session.user.id)
+        api.fetchBibleHighlights(session.user.id),
+        api.fetchBibleBookmarks(session.user.id)
       ]);
       if (cancelled) return;
       if (profile) {
@@ -775,6 +776,7 @@ export default function App() {
       setBlocks(myBlocks);
       setMutedUserIds(new Set(myMutes));
       setBibleHighlights(highlights);
+      setBibleBookmarks(bookmarks);
       setIsLoggedIn(true);
       setAuthKnown(true);
     })();
@@ -2194,6 +2196,25 @@ export default function App() {
         api.removeBibleHighlight(session.user.id, bookId, chapter, verseNum).catch(() => {});
       } else {
         api.addBibleHighlight(session.user.id, bookId, chapter, verseNum).catch(() => {});
+      }
+    }
+  };
+
+  // Toggles a verse bookmark -- a separate, independent concept from a
+  // highlight (see migration 022): a highlight emphasizes a verse in place
+  // while reading, a bookmark adds it to the "Saved Bible Verses" list on
+  // the profile so it can be found again without remembering the reference.
+  const handleVerseBookmark = (verseKey) => {
+    const [bookId, chapterStr, verseStr] = verseKey.split(':');
+    const chapter = Number(chapterStr);
+    const verseNum = Number(verseStr);
+    const wasBookmarked = bibleBookmarks.includes(verseKey);
+    setBibleBookmarks(prev => wasBookmarked ? prev.filter(k => k !== verseKey) : [...prev, verseKey]);
+    if (isSupabaseConfigured && session) {
+      if (wasBookmarked) {
+        api.removeBibleBookmark(session.user.id, bookId, chapter, verseNum).catch(() => {});
+      } else {
+        api.addBibleBookmark(session.user.id, bookId, chapter, verseNum).catch(() => {});
       }
     }
   };
@@ -4160,6 +4181,7 @@ export default function App() {
                         ) : chapterVerses.map(verse => {
                           const verseKey = `${selectedBook.id}:${selectedChapter}:${verse.v}`;
                           const isHighlighted = bibleHighlights.includes(verseKey);
+                          const isBookmarked = bibleBookmarks.includes(verseKey);
                           return (
                             <div
                               key={verse.v}
@@ -4167,8 +4189,17 @@ export default function App() {
                               onClick={() => handleVerseClick(verseKey)}
                               style={{ cursor: 'pointer' }}
                             >
-                              <span className="verse-number">{verse.v}</span>
-                              <span className="verse-content">{verse.t}</span>
+                              <span className="verse-text-group">
+                                <span className="verse-number">{verse.v}</span>
+                                <span className="verse-content">{verse.t}</span>
+                              </span>
+                              <button
+                                className={`verse-bookmark-btn ${isBookmarked ? 'active' : ''}`}
+                                onClick={(e) => { e.stopPropagation(); handleVerseBookmark(verseKey); }}
+                                aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark verse'}
+                              >
+                                <Icons.Bookmark fill={isBookmarked} />
+                              </button>
                             </div>
                           );
                         })}

@@ -319,6 +319,22 @@ export async function removeBibleHighlight(userId, bookId, chapter, verse) {
   return supabase.from('bible_highlights').delete().match({ user_id: userId, book_id: bookId, chapter, verse });
 }
 
+// ------------------------------------------------------- bible bookmarks
+
+export async function fetchBibleBookmarks(userId) {
+  const { data, error } = await supabase.from('bible_bookmarks').select('book_id, chapter, verse').eq('user_id', userId);
+  if (error) return [];
+  return data.map(b => `${b.book_id}:${b.chapter}:${b.verse}`);
+}
+
+export async function addBibleBookmark(userId, bookId, chapter, verse) {
+  return supabase.from('bible_bookmarks').insert({ user_id: userId, book_id: bookId, chapter, verse });
+}
+
+export async function removeBibleBookmark(userId, bookId, chapter, verse) {
+  return supabase.from('bible_bookmarks').delete().match({ user_id: userId, book_id: bookId, chapter, verse });
+}
+
 // -------------------------------------------------------------- mutes
 
 export async function fetchMutes(myId) {
