@@ -1,6 +1,6 @@
 // Real, substantive Privacy Policy and Terms of Service text for Crescamus.
-// A few fields ([Business Name], governing-law jurisdiction) are left as
-// clearly-marked placeholders for you to fill in — and given this is a
+// The governing-law jurisdiction (Terms, section 10) is still a
+// clearly-marked placeholder pending that decision — and given this is a
 // social app handling accounts, messages, and personal data, get an actual
 // lawyer to review before a real public launch. This is a solid starting
 // point, not a substitute for one.
@@ -50,7 +50,7 @@ If we make material changes to this policy, we'll update the "Last updated" date
 
 9. CONTACT
 
-Questions about this policy or your data can be sent to [your contact email].
+Questions about this policy or your data can be sent to crescamus.app@gmail.com.
 `.trim();
 
 export const TERMS_OF_SERVICE = `
@@ -104,5 +104,5 @@ We may update these Terms from time to time. Continued use of the app after chan
 
 12. CONTACT
 
-Questions about these Terms can be sent to [your contact email].
+Questions about these Terms can be sent to crescamus.app@gmail.com.
 `.trim();

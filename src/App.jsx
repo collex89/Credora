@@ -4009,16 +4009,6 @@ export default function App() {
                     </div>
                   )}
 
-                  {storyOpen.id === 'news' && (
-                    <div>
-                      <span className="story-hero-icon"><Icons.Notification /></span>
-                      <h2 style={{ color: '#fff', margin: '14px 0 8px' }}>World Youth Day 2026</h2>
-                      <p style={{ color: '#eee', marginBottom: '24px' }}>
-                        Registration is now officially open! Join thousands of Catholic youths in pilgrimage.
-                      </p>
-                    </div>
-                  )}
-
                 </div>
 
                 <div style={{ height: '4px', background: 'rgba(255,255,255,0.2)', borderRadius: '2px', overflow: 'hidden' }}>

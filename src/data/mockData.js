@@ -619,8 +619,11 @@ export const AUDIO_TRACKS = [
   }
 ];
 
+// "Church News" was removed -- it was a permanently hardcoded fake
+// headline (World Youth Day 2026) with no real source behind it, not
+// actual news. Re-add a third tile here once there's a real feed/source
+// to back it.
 export const STORIES = [
   { id: "verse", title: "Daily Verse", label: "Read", color: "linear-gradient(135deg, #1E3A8A, #3B82F6)", icon: "BookOpen" },
-  { id: "reminder", title: "Prayer Time", label: "Pray", color: "linear-gradient(135deg, #10B981, #059669)", icon: "Rosary" },
-  { id: "news", title: "Church News", label: "Learn", color: "linear-gradient(135deg, #EC4899, #D946EF)", icon: "Notification" }
+  { id: "reminder", title: "Prayer Time", label: "Pray", color: "linear-gradient(135deg, #10B981, #059669)", icon: "Rosary" }
 ];
