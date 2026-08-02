@@ -659,6 +659,22 @@ export default function App() {
   const audioRef = useRef(null);
   const sleepTimerRef = useRef(null);
 
+  // Mobile on-screen keyboards shrink the visible (visual) viewport without
+  // resizing the layout viewport -- so full-height overlays like the chat
+  // thread, sized by inset:0, don't actually shrink when the keyboard
+  // opens, and their bottom-pinned input bar ends up hidden behind the
+  // keyboard instead of sitting right above it. Tracking the real visual
+  // viewport height here and applying it as this custom property lets
+  // those overlays shrink to fit above the keyboard instead.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => document.documentElement.style.setProperty('--visual-vh', `${vv.height}px`);
+    update();
+    vv.addEventListener('resize', update);
+    return () => vv.removeEventListener('resize', update);
+  }, []);
+
   // 1. Splash fadeout effect -- a 2s minimum so the branding always shows,
   // plus an 8s failsafe so a hung network request can never leave someone
   // stuck on the splash screen forever (see the splashMinElapsed/authKnown
@@ -2001,6 +2017,30 @@ export default function App() {
     setChatInput('');
   };
 
+  const isSameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+  const formatMessageTime = (iso) => {
+    if (!iso) return '';
+    return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  };
+
+  // "Today" / "Yesterday" / a full date -- shown once per calendar day the
+  // conversation spans, the same convention WhatsApp/iMessage use, rather
+  // than repeating a date on every single bubble.
+  const formatMessageDateDivider = (iso) => {
+    const date = new Date(iso);
+    const now = new Date();
+    if (isSameDay(date, now)) return 'Today';
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    if (isSameDay(date, yesterday)) return 'Yesterday';
+    return date.toLocaleDateString([], {
+      month: 'long',
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
+  };
+
   const handleChatImageChange = (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -2029,7 +2069,7 @@ export default function App() {
         setChatMessages(fresh);
         api.fetchConversations(session.user.id).then(setConversations);
       } else {
-        const newMsg = { id: `local-${Date.now()}`, fromMe: true, text, image: chatImage?.preview || null, time: 'Just now' };
+        const newMsg = { id: `local-${Date.now()}`, fromMe: true, text, image: chatImage?.preview || null, time: 'Just now', createdAt: new Date().toISOString() };
         setChatMessages(prev => [...prev, newMsg]);
         setConversations(prev => prev.map(c => c.userId === activeChatUser.userId
           ? { ...c, lastText: text || '📷 Photo', lastTime: 'Just now' }
@@ -3235,14 +3275,24 @@ export default function App() {
                       <p>Say hello to {activeChatUser.name.split(' ')[0]}!</p>
                     </div>
                   ) : (
-                    chatMessages.map(m => (
-                      <div key={m.id} className={`chat-bubble-row ${m.fromMe ? 'mine' : 'theirs'}`}>
-                        <div className="chat-bubble">
-                          {m.image && <img src={m.image} className="chat-bubble-image" alt="Attachment" />}
-                          {m.text && <span>{m.text}</span>}
-                        </div>
-                      </div>
-                    ))
+                    chatMessages.map((m, i) => {
+                      const prev = chatMessages[i - 1];
+                      const showDateDivider = m.createdAt && (!prev?.createdAt || !isSameDay(new Date(prev.createdAt), new Date(m.createdAt)));
+                      return (
+                        <React.Fragment key={m.id}>
+                          {showDateDivider && (
+                            <div className="chat-date-divider"><span>{formatMessageDateDivider(m.createdAt)}</span></div>
+                          )}
+                          <div className={`chat-bubble-row ${m.fromMe ? 'mine' : 'theirs'}`}>
+                            <div className="chat-bubble">
+                              {m.image && <img src={m.image} className="chat-bubble-image" alt="Attachment" />}
+                              {m.text && <span>{m.text}</span>}
+                            </div>
+                            {m.createdAt && <span className="chat-bubble-time">{formatMessageTime(m.createdAt)}</span>}
+                          </div>
+                        </React.Fragment>
+                      );
+                    })
                   )}
                 </div>
 

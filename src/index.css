@@ -2369,6 +2369,10 @@ textarea.form-input {
 .saint-details-view {
   position: absolute;
   inset: 0;
+  /* Shrinks to fit above an open mobile keyboard instead of running full
+     height underneath it -- see the visualViewport effect in App.jsx.
+     Falls back to the normal inset:0 sizing everywhere else. */
+  height: var(--visual-vh, 100%);
   background: var(--surface);
   z-index: 1800;
   display: flex;
@@ -3570,14 +3574,37 @@ textarea.form-input {
 
 .chat-bubble-row {
   display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .chat-bubble-row.mine {
-  justify-content: flex-end;
+  align-items: flex-end;
 }
 
 .chat-bubble-row.theirs {
-  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.chat-bubble-time {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  padding: 0 4px;
+}
+
+.chat-date-divider {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0 4px;
+}
+
+.chat-date-divider span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--background);
+  padding: 4px 12px;
+  border-radius: 12px;
 }
 
 .chat-bubble {

@@ -517,7 +517,8 @@ export async function fetchMessages(myId, otherId) {
     fromMe: m.sender_id === myId,
     text: m.text,
     image: m.image_path ? (signedByPath.get(m.image_path) || null) : null,
-    time: timeAgo(m.created_at)
+    time: timeAgo(m.created_at),
+    createdAt: m.created_at
   }));
 }
 
