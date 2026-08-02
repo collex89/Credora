@@ -689,6 +689,16 @@ export async function updateMyPassword(newPassword) {
   return supabase.auth.updateUser({ password: newPassword });
 }
 
+// Used for the in-app change-password form (as opposed to the emailed
+// reset-link flow, which doesn't need this): re-checks the current
+// password before allowing a new one, so a session left open on a shared
+// device can't be used to silently lock the real owner out.
+export async function changeMyPassword(email, currentPassword, newPassword) {
+  const { error: reauthError } = await supabase.auth.signInWithPassword({ email, password: currentPassword });
+  if (reauthError) return { error: { message: 'Current password is incorrect.' } };
+  return supabase.auth.updateUser({ password: newPassword });
+}
+
 // ---------------------------------------------------------- moderation
 
 export async function fileReport({ reporterId, reportedUserId = null, reportedPostId = null, reason, details = '' }) {

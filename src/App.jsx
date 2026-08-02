@@ -9,6 +9,7 @@ import { MISSION, ABOUT_FEATURES, CONTENT_SOURCING_NOTE } from './data/aboutCont
 import { startReminderScheduler, requestNotificationPermission, getNotificationPermission, isNotificationSupported, unlockAlarmAudio, subscribeToPushNotifications, getDeviceTimezone } from './lib/reminders';
 import { renderFormattedText, wrapSelection, prefixLines, insertAtCursor } from './lib/textFormatting';
 import { downloadVerseImage } from './lib/verseImage';
+import { downloadPostImage } from './lib/postImage';
 
 // A curated set for the composer's emoji picker — everyday expression plus
 // faith-relevant symbols, not the full unicode emoji set.
@@ -499,6 +500,7 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(false);
   const [recoveryPassword, setRecoveryPassword] = useState('');
+  const [recoveryPasswordConfirm, setRecoveryPasswordConfirm] = useState('');
   const [showRecoveryPassword, setShowRecoveryPassword] = useState(false);
   const [recoveryStatus, setRecoveryStatus] = useState(''); // '' | 'saving' | 'saved' | error message
   const [authError, setAuthError] = useState('');
@@ -520,6 +522,7 @@ export default function App() {
   const [reshareMenuOpen, setReshareMenuOpen] = useState(null); // post id whose Repost/Quote choice is open
   const [shareMenuOpen, setShareMenuOpen] = useState(null); // post id whose Share destination menu is open
   const [copiedShareId, setCopiedShareId] = useState(null); // post id that just had its link copied (brief "Copied!" feedback)
+  const [savingImagePostId, setSavingImagePostId] = useState(null); // post id currently being rendered to a downloadable image
   const [quoteReshareTarget, setQuoteReshareTarget] = useState(null); // post being quote-reshared, or null
   const [quoteReshareText, setQuoteReshareText] = useState('');
 
@@ -608,7 +611,9 @@ export default function App() {
   });
   const [notificationPermission, setNotificationPermission] = useState(getNotificationPermission());
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [currentPasswordValue, setCurrentPasswordValue] = useState('');
   const [changePasswordValue, setChangePasswordValue] = useState('');
+  const [changePasswordConfirm, setChangePasswordConfirm] = useState('');
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [changePasswordStatus, setChangePasswordStatus] = useState(''); // '', 'saving', 'saved', or an error message
 
@@ -633,6 +638,7 @@ export default function App() {
   const [replyingTo, setReplyingTo] = useState(null); // commentId whose reply box is open, or null
   const [replyInputs, setReplyInputs] = useState({}); // commentId -> draft reply text
   const [activePostId, setActivePostId] = useState(null); // postId whose detail view is open
+  const [fullscreenImage, setFullscreenImage] = useState(null); // image URL shown in the tap-to-zoom overlay, or null
   const [scrollToCommentId, setScrollToCommentId] = useState(null); // set alongside activePostId when a notification points at a specific comment
   const [feedRefreshing, setFeedRefreshing] = useState(false);
   const mainScrollRef = useRef(null);
@@ -1113,6 +1119,15 @@ export default function App() {
       setTimeout(() => setCopiedShareId(null), 1500);
     } catch {}
   };
+  const shareAsImage = async (post) => {
+    setSavingImagePostId(post.id);
+    try {
+      await downloadPostImage(post);
+    } finally {
+      setSavingImagePostId(null);
+      setShareMenuOpen(null);
+    }
+  };
 
   const handleUndoReshare = (post) => {
     setPostMenuOpen(null);
@@ -1519,6 +1534,9 @@ export default function App() {
               <button className="post-menu-item" onClick={() => copyShareLink(post)}>
                 <Icons.LinkIcon /> {copiedShareId === post.id ? 'Copied!' : 'Copy Link'}
               </button>
+              <button className="post-menu-item" onClick={() => shareAsImage(post)} disabled={savingImagePostId === post.id}>
+                <Icons.Download /> {savingImagePostId === post.id ? 'Saving...' : 'Save as Image'}
+              </button>
             </div>
           )}
         </div>
@@ -1890,6 +1908,17 @@ export default function App() {
     return '';
   };
 
+  // A real minimum bar rather than Supabase's bare default of "6
+  // characters, anything at all" -- applied consistently at signup, the
+  // in-app change-password form, and the emailed-reset-link form, so none
+  // of the three entry points is weaker than the others.
+  const getPasswordError = (value) => {
+    if (value.length < 8) return 'Password must be at least 8 characters.';
+    if (!/[a-zA-Z]/.test(value)) return 'Password must include at least one letter.';
+    if (!/[0-9]/.test(value)) return 'Password must include at least one number.';
+    return '';
+  };
+
   const generateUniqueUsername = (base) => {
     const cleaned = normalizeUsername(base).replace(/[^a-z0-9._]+/g, '.').replace(/^\.+|\.+$/g, '') || 'pilgrim';
     let candidate = cleaned;
@@ -2102,7 +2131,9 @@ export default function App() {
 
   const handleSetRecoveryPassword = async (e) => {
     e.preventDefault();
-    if (recoveryPassword.length < 6) { setRecoveryStatus('Password must be at least 6 characters.'); return; }
+    const pwError = getPasswordError(recoveryPassword);
+    if (pwError) { setRecoveryStatus(pwError); return; }
+    if (recoveryPassword !== recoveryPasswordConfirm) { setRecoveryStatus('Passwords do not match.'); return; }
     setRecoveryStatus('saving');
     const { error } = await api.updateMyPassword(recoveryPassword);
     if (error) {
@@ -2110,20 +2141,29 @@ export default function App() {
     } else {
       setRecoveryStatus('saved');
       setRecoveryPassword('');
+      setRecoveryPasswordConfirm('');
       setTimeout(() => setPasswordRecoveryMode(false), 1500);
     }
   };
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (changePasswordValue.length < 6) { setChangePasswordStatus('Password must be at least 6 characters.'); return; }
+    if (!isSupabaseConfigured) { setChangePasswordStatus('Demo mode — no password is actually stored.'); return; }
+    if (!currentPasswordValue) { setChangePasswordStatus('Enter your current password.'); return; }
+    const pwError = getPasswordError(changePasswordValue);
+    if (pwError) { setChangePasswordStatus(pwError); return; }
+    if (changePasswordValue !== changePasswordConfirm) { setChangePasswordStatus('New passwords do not match.'); return; }
     setChangePasswordStatus('saving');
-    const { error } = await api.updateMyPassword(changePasswordValue);
+    // Re-checks currentPasswordValue is actually correct before allowing the
+    // change -- see api.changeMyPassword.
+    const { error } = await api.changeMyPassword(session.user.email, currentPasswordValue, changePasswordValue);
     if (error) {
       setChangePasswordStatus(error.message);
     } else {
       setChangePasswordStatus('saved');
+      setCurrentPasswordValue('');
       setChangePasswordValue('');
+      setChangePasswordConfirm('');
       setTimeout(() => setChangePasswordStatus(''), 3000);
     }
   };
@@ -2135,6 +2175,7 @@ export default function App() {
     setAuthNotice('');
     if (!email || !password) return;
     if (authMode === 'register' && !agreedToTerms) return;
+    if (authMode === 'register' && getPasswordError(password)) return; // error is shown inline under the field
 
     // Demo mode: no backend configured — simulate the account locally
     if (!isSupabaseConfigured) {
@@ -2406,6 +2447,18 @@ export default function App() {
         </div>
       )}
 
+      {/* FULLSCREEN IMAGE VIEWER -- tap a post's image in the detail view to
+          zoom; tap anywhere to close. position: fixed for the same reason
+          as the mention dropdown above. */}
+      {fullscreenImage && (
+        <div className="image-lightbox" onClick={() => setFullscreenImage(null)}>
+          <button className="icon-btn image-lightbox-close" onClick={() => setFullscreenImage(null)} aria-label="Close">
+            <Icons.Close />
+          </button>
+          <img src={fullscreenImage} alt="post content, enlarged" />
+        </div>
+      )}
+
       <div className="app-container">
         {/* ------------------ VIEW 1: SPLASH SCREEN ------------------ */}
         {splashActive && (
@@ -2453,6 +2506,19 @@ export default function App() {
                     {showRecoveryPassword ? <Icons.EyeOff /> : <Icons.Eye />}
                   </button>
                 </div>
+                <span className="input-hint">At least 8 characters, with a letter and a number.</span>
+              </div>
+
+              <div className="form-group">
+                <label>Confirm New Password</label>
+                <input
+                  type={showRecoveryPassword ? 'text' : 'password'}
+                  className="form-input"
+                  placeholder="••••••••"
+                  value={recoveryPasswordConfirm}
+                  onChange={(e) => { setRecoveryPasswordConfirm(e.target.value); setRecoveryStatus(''); }}
+                  required
+                />
               </div>
 
               {recoveryStatus === 'saved' ? (
@@ -2658,6 +2724,13 @@ export default function App() {
                     {showPassword ? <Icons.EyeOff /> : <Icons.Eye />}
                   </button>
                 </div>
+                {authMode === 'register' && (
+                  password
+                    ? (getPasswordError(password)
+                        ? <span className="input-error">{getPasswordError(password)}</span>
+                        : <span className="input-ok"><Icons.Check /> Strong enough</span>)
+                    : <span className="input-hint">At least 8 characters, with a letter and a number.</span>
+                )}
               </div>
 
               {authMode === 'login' && (
@@ -3423,14 +3496,15 @@ export default function App() {
                     <h4 className="settings-section-title">Account</h4>
                     <div className="settings-row" style={{ cursor: 'default', flexDirection: 'column', alignItems: 'stretch', gap: '10px' }}>
                       <span><Icons.Key /> Change Password</span>
-                      <form onSubmit={handleChangePassword} style={{ display: 'flex', gap: '8px' }}>
-                        <div className="password-input-wrap" style={{ flex: 1 }}>
+                      <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="password-input-wrap">
                           <input
                             type={showChangePassword ? 'text' : 'password'}
                             className="form-input"
-                            placeholder="New password"
-                            value={changePasswordValue}
-                            onChange={(e) => { setChangePasswordValue(e.target.value); setChangePasswordStatus(''); }}
+                            placeholder="Current password"
+                            value={currentPasswordValue}
+                            onChange={(e) => { setCurrentPasswordValue(e.target.value); setChangePasswordStatus(''); }}
+                            autoComplete="current-password"
                           />
                           <button
                             type="button"
@@ -3441,14 +3515,35 @@ export default function App() {
                             {showChangePassword ? <Icons.EyeOff /> : <Icons.Eye />}
                           </button>
                         </div>
-                        <button type="submit" className="comment-submit-btn" style={{ borderRadius: '8px', width: '38px', height: '38px', flexShrink: 0 }} disabled={changePasswordStatus === 'saving'}>
-                          <Icons.Check />
+                        <input
+                          type={showChangePassword ? 'text' : 'password'}
+                          className="form-input"
+                          placeholder="New password"
+                          value={changePasswordValue}
+                          onChange={(e) => { setChangePasswordValue(e.target.value); setChangePasswordStatus(''); }}
+                          autoComplete="new-password"
+                        />
+                        <input
+                          type={showChangePassword ? 'text' : 'password'}
+                          className="form-input"
+                          placeholder="Confirm new password"
+                          value={changePasswordConfirm}
+                          onChange={(e) => { setChangePasswordConfirm(e.target.value); setChangePasswordStatus(''); }}
+                          autoComplete="new-password"
+                        />
+                        {changePasswordValue && (
+                          getPasswordError(changePasswordValue)
+                            ? <span className="input-error">{getPasswordError(changePasswordValue)}</span>
+                            : <span className="input-hint">At least 8 characters, with a letter and a number.</span>
+                        )}
+                        {changePasswordStatus === 'saved' && <span className="input-ok"><Icons.Check /> Password updated.</span>}
+                        {changePasswordStatus && changePasswordStatus !== 'saving' && changePasswordStatus !== 'saved' && (
+                          <span className="input-error">{changePasswordStatus}</span>
+                        )}
+                        <button type="submit" className="auth-btn" style={{ margin: 0 }} disabled={changePasswordStatus === 'saving'}>
+                          {changePasswordStatus === 'saving' ? 'Updating...' : 'Update Password'}
                         </button>
                       </form>
-                      {changePasswordStatus === 'saved' && <span className="input-ok"><Icons.Check /> Password updated.</span>}
-                      {changePasswordStatus && changePasswordStatus !== 'saving' && changePasswordStatus !== 'saved' && (
-                        <span className="input-error">{changePasswordStatus}</span>
-                      )}
                       {!isSupabaseConfigured && <span className="input-hint">Demo mode — no password is actually stored.</span>}
                     </div>
 
@@ -3629,7 +3724,15 @@ export default function App() {
 
                       <div className="feed-text post-detail-text">{renderFormattedText(detailPost.text, openPersonProfile)}</div>
                       {detailPost.video && <video src={detailPost.video} className="feed-image" controls playsInline />}
-                      {detailPost.image && <img src={detailPost.image} className="feed-image" alt="post content" />}
+                      {detailPost.image && (
+                        <img
+                          src={detailPost.image}
+                          className="feed-image"
+                          alt="post content"
+                          onClick={() => setFullscreenImage(detailPost.image)}
+                          style={{ cursor: 'zoom-in' }}
+                        />
+                      )}
 
                       <div className="feed-actions">
                         <button className={`feed-action-btn ${detailPost.isLiked ? 'liked' : ''}`} onClick={() => handleLikePost(detailPost.originalPostId)}>
@@ -3689,6 +3792,9 @@ export default function App() {
                               </button>
                               <button className="post-menu-item" onClick={() => copyShareLink(detailPost)}>
                                 <Icons.LinkIcon /> {copiedShareId === detailPost.id ? 'Copied!' : 'Copy Link'}
+                              </button>
+                              <button className="post-menu-item" onClick={() => shareAsImage(detailPost)} disabled={savingImagePostId === detailPost.id}>
+                                <Icons.Download /> {savingImagePostId === detailPost.id ? 'Saving...' : 'Save as Image'}
                               </button>
                             </div>
                           )}

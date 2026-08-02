@@ -3181,6 +3181,35 @@ textarea.form-input {
   text-decoration: underline;
 }
 
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  cursor: zoom-out;
+}
+
+.image-lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+}
+
+.image-lightbox-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  padding: 8px;
+}
+
 .mention-suggestions {
   position: fixed;
   z-index: 3000;
@@ -3273,6 +3302,16 @@ textarea.form-input {
 }
 
 .post-menu-item.disabled:hover {
+  background: none;
+}
+
+.post-menu-item:disabled {
+  color: var(--text-secondary);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.post-menu-item:disabled:hover {
   background: none;
 }
 
