@@ -14,6 +14,7 @@ import { downloadPostImage } from './lib/postImage';
 // A curated set for the composer's emoji picker — everyday expression plus
 // faith-relevant symbols, not the full unicode emoji set.
 const MAX_COMPOSER_VIDEO_BYTES = 50 * 1024 * 1024; // 50MB — generous for a short clip, cheap to fail fast on client rather than mid-upload
+const POST_MAX_LENGTH = 2000; // matches the posts.text check constraint (schema.sql) — shown live so a long post is never silently rejected at submit time
 
 const COMPOSER_EMOJIS = [
   '🙏', '❤️', '✝️', '🕊️', '😊', '😇', '🙌', '✨', '🌟', '⭐',
@@ -1636,6 +1637,7 @@ export default function App() {
   const handleCreatePost = async () => {
     const text = newPostText.trim();
     if (!text && !composerMedia) return;
+    if (newPostText.length > POST_MAX_LENGTH) return;
 
     setComposerError('');
     setComposerPosting(true);
@@ -1694,7 +1696,7 @@ export default function App() {
   const handleSaveEditPost = async () => {
     if (!editingPost) return;
     const text = editPostText.trim();
-    if (!text) return;
+    if (!text || editPostText.length > POST_MAX_LENGTH) return;
     const originalId = editingPost.originalPostId;
 
     setEditPostSaving(true);
@@ -3334,7 +3336,7 @@ export default function App() {
                   <h3>New Post</h3>
                   <button
                     className="composer-post-btn"
-                    disabled={(!newPostText.trim() && !composerMedia) || composerPosting}
+                    disabled={(!newPostText.trim() && !composerMedia) || newPostText.length > POST_MAX_LENGTH || composerPosting}
                     onClick={handleCreatePost}
                   >
                     {composerPosting ? 'Posting...' : 'Post'}
@@ -3380,6 +3382,11 @@ export default function App() {
                       )}
                     </div>
                     <div style={{ flex: 1 }} />
+                    <span className={`composer-char-count ${
+                      newPostText.length > POST_MAX_LENGTH ? 'over-limit' : newPostText.length > POST_MAX_LENGTH - 100 ? 'near-limit' : ''
+                    }`}>
+                      {newPostText.length}/{POST_MAX_LENGTH}
+                    </span>
                     <button
                       type="button"
                       className={`composer-format-btn ${composerPreview ? 'active' : ''}`}
@@ -3952,7 +3959,7 @@ export default function App() {
                   <button
                     className="auth-btn"
                     style={{ width: 'auto', padding: '8px 20px', fontSize: '13px' }}
-                    disabled={!editPostText.trim() || editPostSaving}
+                    disabled={!editPostText.trim() || editPostText.length > POST_MAX_LENGTH || editPostSaving}
                     onClick={handleSaveEditPost}
                   >
                     {editPostSaving ? 'Saving...' : 'Save'}
@@ -3966,6 +3973,13 @@ export default function App() {
                     onChange={(e) => setEditPostText(e.target.value)}
                     autoFocus
                   />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 4px' }}>
+                    <span className={`composer-char-count ${
+                      editPostText.length > POST_MAX_LENGTH ? 'over-limit' : editPostText.length > POST_MAX_LENGTH - 100 ? 'near-limit' : ''
+                    }`}>
+                      {editPostText.length}/{POST_MAX_LENGTH}
+                    </span>
+                  </div>
                   {editingPost.video && <video src={editingPost.video} className="feed-image" controls playsInline />}
                   {editingPost.image && <img src={editingPost.image} className="feed-image" alt="post content" />}
                 </div>

@@ -3109,6 +3109,23 @@ textarea.form-input {
   color: #fff;
 }
 
+.composer-char-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.composer-char-count.near-limit {
+  color: var(--secondary);
+}
+
+.composer-char-count.over-limit {
+  color: var(--notification);
+}
+
 .composer-emoji-wrap {
   position: relative;
 }
