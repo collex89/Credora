@@ -561,6 +561,7 @@ export default function App() {
   const [subView, setSubView] = useState(null); // null | 'search' | 'saints' | 'saintsBrowse' | 'person'
   const [saintCategoryFilter, setSaintCategoryFilter] = useState('All');
   const [activeSaint, setActiveSaint] = useState(null);
+  const [copiedSaintShare, setCopiedSaintShare] = useState(false);
   const [activePerson, setActivePerson] = useState(null); // user id
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
@@ -694,6 +695,19 @@ export default function App() {
   useEffect(() => {
     if (splashMinElapsed && authKnown) setSplashActive(false);
   }, [splashMinElapsed, authKnown]);
+
+  // 1z. Open straight to a shared saint's page if the URL was shared via
+  // the saint detail view's share button (see shareSaintLink) -- a
+  // lightweight hash-based deep link rather than a full router, since
+  // this is the only place in the app that currently needs one.
+  useEffect(() => {
+    const match = window.location.hash.match(/^#saint=([a-z0-9_-]+)$/i);
+    if (!match) return;
+    const saint = SAINTS.find(s => s.id === match[1]);
+    if (!saint) return;
+    setActiveSaint(saint);
+    setSubView('saints');
+  }, []);
 
   // 2. Synchronize theme styling variables
   useEffect(() => {
@@ -1144,6 +1158,25 @@ export default function App() {
       setSavingImagePostId(null);
       setShareMenuOpen(null);
     }
+  };
+
+  // Unlike posts, a saint has a real (if lightweight) deep link -- see the
+  // #saint= hash effect near the top of the component -- so sharing one
+  // actually opens straight to that saint for whoever receives it, not
+  // just the app's home screen.
+  const getSaintShareUrl = (saint) => `${window.location.origin}/#saint=${saint.id}`;
+
+  const shareSaintLink = async (saint) => {
+    const url = getSaintShareUrl(saint);
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try { await navigator.share({ title: `${saint.name} — Crescamus`, text: `Read about ${saint.name} on Crescamus`, url }); } catch {}
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedSaintShare(true);
+      setTimeout(() => setCopiedSaintShare(false), 1500);
+    } catch {}
   };
 
   const handleUndoReshare = (post) => {
@@ -3035,6 +3068,14 @@ export default function App() {
                   <div className="saint-details-overlay"></div>
                   <button className="saint-details-close-btn" onClick={() => { setSubView('saintsBrowse'); setActiveSaint(null); }}>
                     <Icons.ChevronLeft />
+                  </button>
+                  <button
+                    className="saint-details-share-btn"
+                    onClick={() => shareSaintLink(activeSaint)}
+                    aria-label="Copy link to this saint"
+                    title="Copy link to this saint"
+                  >
+                    {copiedSaintShare ? <Icons.Check /> : <Icons.Share />}
                   </button>
                   <div className="saint-details-title-box">
                     <span>{activeSaint.category}</span>

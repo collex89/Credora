@@ -2397,10 +2397,10 @@ textarea.form-input {
   background: linear-gradient(to bottom, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.7) 100%);
 }
 
-.saint-details-close-btn {
+.saint-details-close-btn,
+.saint-details-share-btn {
   position: absolute;
   top: 16px;
-  left: 16px;
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -2412,6 +2412,19 @@ textarea.form-input {
   justify-content: center;
   cursor: pointer;
   z-index: 10;
+}
+
+.saint-details-close-btn {
+  left: 16px;
+}
+
+.saint-details-share-btn {
+  right: 16px;
+}
+
+.saint-details-share-btn svg {
+  width: 17px;
+  height: 17px;
 }
 
 .saint-details-title-box {

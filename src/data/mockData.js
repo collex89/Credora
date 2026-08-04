@@ -439,6 +439,18 @@ export const SAINTS = [
     image: "/saints/johnbaptist.jpg",
     sourceUrl: "https://en.wikipedia.org/wiki/John_the_Baptist",
     imageLicense: "Public domain"
+  },
+  {
+    id: "johnvianney",
+    name: "St. John Vianney",
+    category: "Confessors",
+    feastDay: "August 4",
+    patronage: "Parish Priests, Confessors",
+    quote: "The priesthood is the love of the heart of Jesus.",
+    bio: "John Baptist Mary Vianney (8 May 1786 – 4 August 1859) was a French parish priest, venerated as the patron saint of parish priests and, more broadly, of confessors. Born into a farming family near Lyon during the upheaval of the French Revolution, when priests were hunted and Mass had to be offered in secret, he received only a fragmented early education and struggled for years with his studies, especially Latin, before finally being ordained in 1815.\nIn 1818 he was sent to Ars-sur-Formans, a small, spiritually indifferent village that few other priests wanted. Over the following decades he transformed it through relentless preaching, personal austerity, and an extraordinary dedication to the confessional — by the later years of his life he was hearing confessions up to sixteen hours a day, and pilgrims arrived from across France and beyond in such numbers that the local railway added a stop and the post office extra service just to handle them. He is remembered for his simple, direct sermons, his deep devotion to the Eucharist, and for enduring years of nightly harassment he attributed to the devil, which he bore with characteristic good humor, nicknaming it \"le grappin.\"\nCanonized in 1925, he was declared patron of parish priests by Pope Pius XI in 1929, a patronage Pope John Paul II later extended to priests everywhere. In 2009, Pope Benedict XVI opened a worldwide \"Year for Priests\" on the 150th anniversary of his death, holding him up as a model of priestly holiness rooted not in scholarship but in prayer, penance, and constant availability to souls.",
+    image: "/saints/johnvianney.jpg",
+    sourceUrl: "https://en.wikipedia.org/wiki/John_Vianney",
+    imageLicense: "CC BY-SA 3.0"
   }
 ];
 
