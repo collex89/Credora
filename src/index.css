@@ -137,6 +137,27 @@ body {
   height: 100%;
 }
 
+/* On an actual desktop (a mouse, not a touch screen, on a wide-enough
+   window) stretching the single-column mobile layout edge-to-edge just
+   makes every input and button balloon to an awkward width -- the same
+   content read as a centered column instead, the way most mobile-first
+   web apps present themselves on desktop. Touch devices are excluded via
+   (hover: hover) and (pointer: fine) so a tablet, which is just as wide,
+   still gets the normal full-bleed layout instead of a tiny column. */
+@media (hover: hover) and (pointer: fine) and (min-width: 640px) {
+  body {
+    background-color: #EAE6D9;
+  }
+  .device-container {
+    width: 480px;
+    height: calc(100vh - 80px);
+    height: calc(100svh - 80px);
+    margin: 40px auto;
+    border-radius: 20px;
+    box-shadow: 0 24px 60px -20px rgba(27, 35, 48, 0.35);
+  }
+}
+
 /* Scrollbar styling inside App */
 .scrollable {
   flex: 1;
