@@ -68,38 +68,40 @@ body {
 }
 
 /* ----------------------------------------------------
-   Simulated Premium Mobile Device Frame (Desktop Only)
+   App Shell — full-bleed on every screen size, desktop
+   included. This used to wrap the app in a simulated phone
+   bezel (notch, dark border, drop shadow) above 1024px and
+   only go edge-to-edge on real phones/tablets; now it's
+   edge-to-edge everywhere, so a desktop visitor gets the
+   same layout as a phone instead of a decorative mockup.
    ---------------------------------------------------- */
+body {
+  background-color: var(--background);
+}
+
 .device-container {
   position: relative;
-  width: 412px;
-  height: 860px;
+  width: 100vw;
+  height: 100vh; /* fallback for browsers without svh/dvh support */
+  /* Small viewport height — the guaranteed-visible minimum (as if the
+     address bar is always shown). dvh was clipping the bottom nav's
+     labels on some Android browsers (e.g. MIUI/HyperOS Chrome) whose
+     docked address bar doesn't match Chrome's own dvh calculation,
+     making the container taller than what's actually on screen. svh
+     trades a small gap when the address bar auto-hides for never
+     overflowing the real visible area. */
+  height: 100svh;
   background: #1e1e24;
-  border: 12px solid #2d2d34;
-  border-radius: 46px;
-  box-shadow: 
-    0 25px 50px -12px rgba(0,0,0,0.7),
-    inset 0 4px 20px rgba(255,255,255,0.05);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-/* Notch & Camera */
-.device-notch {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 140px;
-  height: 28px;
-  background: #2d2d34;
-  border-bottom-left-radius: 18px;
-  border-bottom-right-radius: 18px;
-  z-index: 9999;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+/* Notch & Camera -- kept for a real phone's own notch area; not shown as
+   a decorative mockup element since there's no simulated bezel anymore. */
+.device-notch,
+.device-status-bar {
+  display: none;
 }
 
 .device-camera {
@@ -118,21 +120,6 @@ body {
   border-radius: 2px;
 }
 
-/* Device Screen Status Bar */
-.device-status-bar {
-  height: 44px;
-  padding: 12px 24px 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: var(--background);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text);
-  z-index: 1000;
-  font-family: var(--font-display);
-}
-
 .status-bar-icons {
   display: flex;
   align-items: center;
@@ -148,42 +135,6 @@ body {
   position: relative;
   overflow: hidden;
   height: 100%;
-}
-
-/* Fallback for Fullscreen Mobile (Responsive Viewports)
-   Matches on EITHER condition, not just narrow width: a tablet in landscape
-   can be 1024px+ wide but is still a real touchscreen device, and a phone
-   held sideways can exceed 480px too. (pointer: coarse) and (hover: none)
-   reliably identifies real touch hardware regardless of orientation, so
-   phones and tablets both get the full-bleed layout no matter how they're
-   held; the width check alone is just a convenience for previewing on a
-   resized desktop browser window. */
-@media (max-width: 1024px), ((pointer: coarse) and (hover: none)) {
-  body {
-    background-color: var(--background);
-  }
-  .device-container {
-    width: 100vw;
-    height: 100vh; /* fallback for browsers without svh/dvh support */
-    /* Small viewport height — the guaranteed-visible minimum (as if the
-       address bar is always shown). dvh was clipping the bottom nav's
-       labels on some Android browsers (e.g. MIUI/HyperOS Chrome) whose
-       docked address bar doesn't match Chrome's own dvh calculation,
-       making the container taller than what's actually on screen. svh
-       trades a small gap when the address bar auto-hides for never
-       overflowing the real visible area. */
-    height: 100svh;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-  }
-  .device-notch,
-  .device-status-bar {
-    /* Decorative device mockup for the desktop preview — a real phone
-       already has its own status bar, so this would just show a
-       permanently-wrong hardcoded time on top of it. */
-    display: none;
-  }
 }
 
 /* Scrollbar styling inside App */
