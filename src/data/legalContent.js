@@ -1,9 +1,9 @@
 // Real, substantive Privacy Policy and Terms of Service text for Crescamus.
 // The governing-law jurisdiction (Terms, section 10) is still a
-// clearly-marked placeholder pending that decision — and given this is a
-// social app handling accounts, messages, and personal data, get an actual
-// lawyer to review before a real public launch. This is a solid starting
-// point, not a substitute for one.
+// clearly-marked placeholder pending that decision. Given this is a social
+// app handling accounts, messages, and personal data, get an actual lawyer
+// to review before a real public launch. This is a solid starting point,
+// not a substitute for one.
 
 export const LAST_UPDATED = "July 2026";
 
@@ -14,7 +14,7 @@ Crescamus ("we", "us", "the App") is a Catholic social platform. This policy exp
 
 1. INFORMATION WE COLLECT
 
-Account information: email address, username, full name, password (stored encrypted — we never see it in plain text), and anything optional you add to your profile (parish, bio, profile photo).
+Account information: email address, username, full name, password (encrypted, so we never see it in plain text), and anything optional you add to your profile (parish, bio, profile photo).
 
 Content you create: posts, comments, likes, follows, direct messages, prayer intentions, and prayer completion history.
 
@@ -26,7 +26,7 @@ To provide the app's core features: your feed, prayer tracking, messaging, and c
 
 3. WHERE YOUR DATA LIVES
 
-Your account and content are stored with Supabase, our backend provider, which encrypts data in transit and at rest. Bible text, saint biographies, and audio content shown in the app are sourced from public-domain and Creative Commons-licensed sources (Project Gutenberg, Wikipedia/Wikimedia Commons, LibriVox, Internet Archive) — using these features doesn't share your personal data with those sources.
+Your account and content are stored with Supabase, our backend provider, which encrypts data in transit and at rest. Bible text, saint biographies, and audio content shown in the app are sourced from public-domain and Creative Commons-licensed sources (Project Gutenberg, Wikipedia/Wikimedia Commons, LibriVox, Internet Archive). Using these features doesn't share your personal data with those sources.
 
 4. DIRECT MESSAGES
 
@@ -34,7 +34,7 @@ Messages you send are private between you and the recipient in the sense that ot
 
 5. PRAYER INTENTIONS
 
-Your personal prayer intentions are private to your account by default — other users cannot see them.
+Your personal prayer intentions are private to your account by default. Other users cannot see them.
 
 6. YOUR RIGHTS
 
@@ -64,7 +64,7 @@ You must be at least 13 years old to use Crescamus. By creating an account, you 
 
 2. YOUR ACCOUNT
 
-You're responsible for the security of your account and everything that happens under it. Usernames are unique — one per person — and impersonating another individual, saint, cleric, or organization is not permitted.
+You're responsible for the security of your account and everything that happens under it. Usernames are unique, one per person, and impersonating another individual, saint, cleric, or organization is not permitted.
 
 3. YOUR CONTENT
 
@@ -76,7 +76,7 @@ Crescamus is meant to be a peaceful, faith-centered space. The following are not
 
 5. REPORTING AND ENFORCEMENT
 
-You can report posts or accounts that violate these standards, and block any user you don't want to interact with you. We review reports and may remove content, suspend, or permanently remove accounts that violate these Terms, at our discretion.
+You can report posts or accounts that violate these standards, and block any user you don't want to interact with. We review reports and may remove content, suspend, or permanently remove accounts that violate these Terms, at our discretion.
 
 6. RELIGIOUS AND EDUCATIONAL CONTENT
 
