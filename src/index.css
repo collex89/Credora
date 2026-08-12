@@ -11,6 +11,7 @@
   --secondary-rgb: 212, 175, 55;
   --background: #FAFAF8;
   --surface: #FFFFFF;
+  --surface-rgb: 255, 255, 255;
   --text: #1B2330;
   --text-secondary: #6B7280;
   --border: #E5E7EB;
@@ -39,6 +40,7 @@
   --secondary-rgb: 233, 196, 106;
   --background: #0B0F19;
   --surface: #131A26;
+  --surface-rgb: 19, 26, 38;
   --text: #F3F4F6;
   --text-secondary: #9CA3AF;
   --border: #1F2937;
@@ -2221,7 +2223,7 @@ input:checked + .slider:before {
   left: 0;
   right: 0;
   height: 58px;
-  background: rgba(var(--surface), 0.95);
+  background: rgba(var(--surface-rgb), 0.95);
   backdrop-filter: blur(12px);
   border-top: 1px solid var(--border);
   display: flex;

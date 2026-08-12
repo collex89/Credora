@@ -643,6 +643,14 @@ export default function App() {
   const [trackDuration, setTrackDuration] = useState(185);
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [sleepTimeLeft, setSleepTimeLeft] = useState(null);
+  // currentTrack defaults to a real track before anyone's pressed play, so
+  // gating the mini-player on currentTrack alone made it appear unprompted
+  // on first load. audioSessionStarted only flips once playback has
+  // actually happened; miniPlayerDismissed is the user's own "hide it" --
+  // someone asked for exactly this: closeable, and back the next time they
+  // press play (see the isPlaying effect below).
+  const [audioSessionStarted, setAudioSessionStarted] = useState(false);
+  const [miniPlayerDismissed, setMiniPlayerDismissed] = useState(false);
   const [playerExpanded, setPlayerExpanded] = useState(false);
 
   // Social Feed & Interaction States
@@ -993,6 +1001,17 @@ export default function App() {
 
     return () => clearInterval(sleepTimerRef.current);
   }, [sleepTimeLeft]);
+
+  // Every time playback actually starts (first play, resume, skip to
+  // another track), that's the mini-player's cue to be visible again --
+  // whether this is the very first play of the session (audioSessionStarted
+  // was still false) or the user dismissed it earlier and pressed play
+  // again since (miniPlayerDismissed was still true).
+  useEffect(() => {
+    if (!isPlaying) return;
+    setAudioSessionStarted(true);
+    setMiniPlayerDismissed(false);
+  }, [isPlaying]);
 
   // Audio Events
   const onTimeUpdate = () => {
@@ -4990,8 +5009,11 @@ export default function App() {
               )}
             </div>
 
-            {/* PERSISTENT AUDIO MINI-PLAYER */}
-            {currentTrack && !playerExpanded && (
+            {/* PERSISTENT AUDIO MINI-PLAYER -- only once playback has
+                actually happened this session, and not while the user has
+                explicitly closed it (see audioSessionStarted/
+                miniPlayerDismissed and the isPlaying effect above). */}
+            {currentTrack && !playerExpanded && audioSessionStarted && !miniPlayerDismissed && (
               <div className="mini-player" onClick={() => setPlayerExpanded(true)}>
                 <div className="mini-player-left">
                   <img
@@ -5011,6 +5033,9 @@ export default function App() {
                   </button>
                   <button className="icon-btn" onClick={() => setPlayerExpanded(true)}>
                     <Icons.ChevronDown />
+                  </button>
+                  <button className="icon-btn" aria-label="Hide mini player" title="Hide (reappears next time you press play)" onClick={() => setMiniPlayerDismissed(true)}>
+                    <Icons.Close />
                   </button>
                 </div>
               </div>
