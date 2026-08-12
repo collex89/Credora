@@ -429,7 +429,13 @@ p {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* "safe" falls back to start-alignment once content is taller than the
+     available space, instead of centering it -- plain "center" here would
+     overflow equally in both directions, pushing the top of a tall form
+     (e.g. the register form, with its extra fields) up past the topbar
+     and out of the scrollable area entirely, unreachable by scrolling
+     down since there's nothing above scrollTop:0 to scroll into view. */
+  justify-content: safe center;
   min-height: 0;
 }
 
