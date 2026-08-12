@@ -138,17 +138,22 @@ body {
 }
 
 /* On an actual desktop (a mouse, not a touch screen, on a wide-enough
-   window) stretching the single-column mobile layout edge-to-edge just
-   makes every input and button balloon to an awkward width -- the same
-   content read as a centered column instead, the way most mobile-first
-   web apps present themselves on desktop. Touch devices are excluded via
-   (hover: hover) and (pointer: fine) so a tablet, which is just as wide,
-   still gets the normal full-bleed layout instead of a tiny column. */
+   window), two different treatments apply depending on whether anyone's
+   signed in yet. Touch devices are excluded via (hover: hover) and
+   (pointer: fine) so a tablet, which is just as wide, still gets the
+   normal mobile layout either way. */
 @media (hover: hover) and (pointer: fine) and (min-width: 640px) {
+  /* Signed out (splash/welcome/auth forms): there's no sidebar to share
+     the screen with, so these read best as a centered narrow card, the
+     way most mobile-first web apps present their login screen on
+     desktop -- stretching a login form edge-to-edge looks broken, not
+     "responsive". Harmless to set unconditionally: when .app-mode is
+     active instead, that variant is full-bleed 100vw/100vh, so the body
+     behind it is never actually visible. */
   body {
     background-color: #EAE6D9;
   }
-  .device-container {
+  .device-container.auth-mode {
     width: 480px;
     height: calc(100vh - 80px);
     height: calc(100svh - 80px);
@@ -156,6 +161,121 @@ body {
     border-radius: 20px;
     box-shadow: 0 24px 60px -20px rgba(27, 35, 48, 0.35);
   }
+
+  /* Signed in: a persistent left sidebar next to a comfortably-wide,
+     centered content column, the way real desktop apps (Instagram,
+     LinkedIn, etc.) use the rest of the screen instead of hiding
+     navigation in a bottom tab bar. */
+  .device-container.app-mode .app-container {
+    flex-direction: row;
+  }
+  .device-container.app-mode .app-navbar {
+    display: none;
+  }
+}
+
+/* Wraps everything except the sidebar and the mobile bottom nav (header,
+   the active screen, mini/fullscreen player) so it can be centered and
+   width-capped as its own column next to the sidebar on desktop, while
+   staying a plain full-height column on mobile (where there's no sidebar
+   to share the row with). */
+.app-main-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  min-width: 0;
+}
+
+@media (hover: hover) and (pointer: fine) and (min-width: 640px) {
+  .app-main-column {
+    max-width: 680px;
+    margin: 0 auto;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+
+  /* No bottom tab bar to reserve space for on desktop -- just enough
+     padding for the mini player when a track is active. */
+  .scrollable {
+    padding-bottom: 96px;
+  }
+  .mini-player {
+    bottom: 0;
+  }
+}
+
+.desktop-sidebar {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) and (min-width: 640px) {
+  .desktop-sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 240px;
+    flex-shrink: 0;
+    padding: 20px 12px;
+    gap: 4px;
+    background: var(--surface);
+  }
+}
+
+.desktop-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 24px;
+  cursor: pointer;
+}
+
+.desktop-sidebar-brand svg {
+  width: 28px;
+  height: 28px;
+  color: var(--secondary);
+}
+
+.desktop-sidebar-brand span {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 19px;
+  color: var(--primary);
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: none;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: left;
+  width: 100%;
+}
+
+.sidebar-nav-item:hover {
+  background: rgba(var(--primary-rgb), 0.06);
+}
+
+.sidebar-nav-item.active {
+  background: rgba(var(--primary-rgb), 0.09);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.sidebar-nav-item svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
 }
 
 /* Scrollbar styling inside App */

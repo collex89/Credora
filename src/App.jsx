@@ -2474,7 +2474,7 @@ export default function App() {
   const filteredSaints = saintCategoryFilter === 'All' ? SAINTS : SAINTS.filter(s => s.category === saintCategoryFilter);
 
   return (
-    <div className="device-container" style={{ '--bible-font-size': `${bibleFontSize}px` }}>
+    <div className={`device-container ${isLoggedIn && !passwordRecoveryMode ? 'app-mode' : 'auth-mode'}`} style={{ '--bible-font-size': `${bibleFontSize}px` }}>
       {/* Notch element */}
       <div className="device-notch">
         <div className="device-speaker"></div>
@@ -2864,6 +2864,34 @@ export default function App() {
         {/* ------------------ LOGGED IN APP AREA ------------------ */}
         {isLoggedIn && !passwordRecoveryMode && (
           <>
+            {/* DESKTOP-ONLY LEFT SIDEBAR NAVIGATION -- hidden on mobile via
+                CSS, where .app-navbar (bottom tab bar) is used instead. Same
+                five destinations, same handlers, just a different chrome for
+                a mouse-and-wide-window session (see the (hover: hover) and
+                (pointer: fine) media query in index.css). */}
+            <nav className="desktop-sidebar">
+              <div className="desktop-sidebar-brand" onClick={handleGoHome}>
+                <Icons.Halo active={true} />
+                <span>Crescamus</span>
+              </div>
+              <button className={`sidebar-nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={handleGoHome}>
+                <Icons.Home active={activeTab === 'home'} /> Home
+              </button>
+              <button className={`sidebar-nav-item ${activeTab === 'bible' ? 'active' : ''}`} onClick={() => { setActiveTab('bible'); setSubView(null); }}>
+                <Icons.Bible active={activeTab === 'bible'} /> Bible
+              </button>
+              <button className={`sidebar-nav-item ${activeTab === 'prayers' ? 'active' : ''}`} onClick={() => { setActiveTab('prayers'); setSubView(null); }}>
+                <Icons.Prayers active={activeTab === 'prayers'} /> Prayers
+              </button>
+              <button className={`sidebar-nav-item ${activeTab === 'audio' ? 'active' : ''}`} onClick={() => { setActiveTab('audio'); setSubView(null); }}>
+                <Icons.Audio active={activeTab === 'audio'} /> Audio
+              </button>
+              <button className={`sidebar-nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => { setActiveTab('profile'); setSubView(null); }}>
+                <Icons.Profile active={activeTab === 'profile'} /> Profile
+              </button>
+            </nav>
+
+            <div className="app-main-column">
             {/* GLOBAL TOP HEAD-BAR */}
             <div className="app-header">
               <div className="header-brand" onClick={handleGoHome}>
@@ -4983,8 +5011,9 @@ export default function App() {
                 </div>
               </div>
             )}
+            </div>
 
-            {/* BOTTOM PERSISTENT NAVIGATION BAR */}
+            {/* BOTTOM PERSISTENT NAVIGATION BAR (mobile only -- see .desktop-sidebar above) */}
             <div className="app-navbar">
               <button className={`nav-item ${activeTab === 'home' ? 'active' : ''}`} onClick={handleGoHome}>
                 <Icons.Home active={activeTab === 'home'} />
