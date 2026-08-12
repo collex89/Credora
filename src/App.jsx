@@ -656,6 +656,9 @@ export default function App() {
   const [fullscreenImage, setFullscreenImage] = useState(null); // image URL shown in the tap-to-zoom overlay, or null
   const [scrollToCommentId, setScrollToCommentId] = useState(null); // set alongside activePostId when a notification points at a specific comment
   const [feedRefreshing, setFeedRefreshing] = useState(false);
+  const [feedMode, setFeedMode] = useState('forYou'); // 'forYou' (ranked) | 'following' (chronological, followed authors only)
+  const [pullDistance, setPullDistance] = useState(0); // live drag offset while pulling down to refresh, 0 when idle
+  const pullStartYRef = useRef(null);
   const mainScrollRef = useRef(null);
 
   // @mention autocomplete -- one shared dropdown, driven by whichever
@@ -1642,10 +1645,43 @@ export default function App() {
       if (isSupabaseConfigured && session) {
         const feed = await api.fetchFeed(session.user.id);
         setPosts(feed || []);
+      } else {
+        // No server to actually pull from in demo mode, but a refresh that
+        // resolves instantly reads as broken rather than "up to date" --
+        // hold the spinner briefly so pull-to-refresh feels real.
+        await new Promise(r => setTimeout(r, 500));
       }
     } finally {
       setFeedRefreshing(false);
     }
+  };
+
+  // Pull-to-refresh on the Home feed (Twitter/Instagram-style): drag down
+  // from the very top of the scroll container past PULL_REFRESH_THRESHOLD
+  // and release to trigger refreshFeed(). Only arms when the feed is
+  // already scrolled to top, so it never fights a normal scroll gesture.
+  const PULL_REFRESH_THRESHOLD = 64;
+  const handleFeedPullStart = (e) => {
+    if (activeTab !== 'home' || feedRefreshing) { pullStartYRef.current = null; return; }
+    if ((mainScrollRef.current?.scrollTop || 0) > 0) { pullStartYRef.current = null; return; }
+    pullStartYRef.current = e.touches[0].clientY;
+  };
+  const handleFeedPullMove = (e) => {
+    if (pullStartYRef.current === null) return;
+    const dy = e.touches[0].clientY - pullStartYRef.current;
+    if (dy <= 0) { setPullDistance(0); return; }
+    // Resistance curve so the indicator eases up the further it's pulled,
+    // instead of tracking the finger 1:1 -- the same rubber-band feel every
+    // native pull-to-refresh uses.
+    setPullDistance(Math.min(dy * 0.5, 90));
+  };
+  const handleFeedPullEnd = () => {
+    if (pullStartYRef.current === null) return;
+    pullStartYRef.current = null;
+    if (pullDistance >= PULL_REFRESH_THRESHOLD) {
+      refreshFeed();
+    }
+    setPullDistance(0);
   };
 
   // Tapping Home (nav bar or the brand logo) always jumps to the top of the
@@ -2367,6 +2403,32 @@ export default function App() {
   });
   const visibleUsers = users.filter(u => !blockedUserIds.has(u.id));
   const unreadNotificationCount = notifications.filter(n => n.unread).length;
+
+  // Home feed ordering. "Following" is the classic reverse-chronological
+  // feed, narrowed to people you follow (plus your own posts) -- exactly
+  // what it says on the tin. "For You" ranks by a recency-decayed
+  // engagement score instead of pure recency, the way X/Instagram/Facebook
+  // surface older-but-popular posts above a just-posted one nobody's seen
+  // yet, with a boost for accounts you already follow so it doesn't turn
+  // into pure popularity contest.
+  const homeFeedPosts = (() => {
+    if (feedMode === 'following') {
+      return visiblePosts
+        .filter(p => p.user.username === myUsername || users.find(u => u.username === p.user.username)?.isFollowing)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+    const now = Date.now();
+    const scoreOf = (p) => {
+      const hoursOld = Math.max((now - new Date(p.createdAt).getTime()) / 3_600_000, 0.1);
+      const engagement = (p.likes || 0) + (p.commentsCount || 0) * 2 + (p.resharesCount || 0) * 3;
+      const isFollowed = p.user.username === myUsername || !!users.find(u => u.username === p.user.username)?.isFollowing;
+      // Hacker News-style gravity decay: engagement matters, but fades with
+      // age so a well-liked post from last week doesn't camp at the top
+      // forever.
+      return ((engagement + 1) * (isFollowed ? 1.5 : 1)) / Math.pow(hoursOld + 2, 1.6);
+    };
+    return [...visiblePosts].sort((a, b) => scoreOf(b) - scoreOf(a));
+  })();
 
   // 7. Universal Search Logic
   const getSearchResults = () => {
@@ -4267,11 +4329,42 @@ export default function App() {
             )}
 
             {/* ------------------ ACTIVE VIEW CONTENT ------------------ */}
-            <div className="scrollable animate-fade-in" ref={mainScrollRef}>
+            <div
+              className="scrollable animate-fade-in"
+              ref={mainScrollRef}
+              onTouchStart={handleFeedPullStart}
+              onTouchMove={handleFeedPullMove}
+              onTouchEnd={handleFeedPullEnd}
+            >
 
               {/* 1. HOME SCREEN */}
               {activeTab === 'home' && (
                 <div>
+                  {/* Pull-to-refresh indicator -- grows with the drag while
+                      pulling, then spins in place once refreshFeed() is
+                      actually running (see handleFeedPull* above). */}
+                  {(pullDistance > 0 || feedRefreshing) && (
+                    <div className="pull-refresh-indicator" style={{ height: feedRefreshing ? 48 : pullDistance }}>
+                      <span className={`pull-refresh-spinner ${feedRefreshing || pullDistance >= PULL_REFRESH_THRESHOLD ? 'ready' : ''}`}>
+                        <Icons.RotateCw />
+                      </span>
+                    </div>
+                  )}
+
+                  {/* For You / Following -- For You is engagement-ranked
+                      (recent + well-liked/commented/reshared, with a boost
+                      for people you follow), not strict recency; Following
+                      is the classic reverse-chronological feed narrowed to
+                      people you actually follow. Same split as X. */}
+                  <div className="feed-mode-tabs">
+                    <button className={`feed-mode-tab-btn ${feedMode === 'forYou' ? 'active' : ''}`} onClick={() => setFeedMode('forYou')}>
+                      For You
+                    </button>
+                    <button className={`feed-mode-tab-btn ${feedMode === 'following' ? 'active' : ''}`} onClick={() => setFeedMode('following')}>
+                      Following
+                    </button>
+                  </div>
+
                   {/* Stories row */}
                   <div className="stories-container">
                     {STORIES.map(story => (
@@ -4317,15 +4410,19 @@ export default function App() {
                     <span style={{ color: 'var(--secondary)', display: 'flex' }}><Icons.Sparkles /></span>
                   </div>
 
-                  {visiblePosts.length === 0 && (
+                  {homeFeedPosts.length === 0 && (
                     <div className="search-empty-state">
                       <span className="empty-state-icon"><Icons.Comment /></span>
-                      <p>Start sharing your faith. Community posts will appear here.</p>
+                      <p>
+                        {feedMode === 'following' && visiblePosts.length > 0
+                          ? "No posts yet from people you follow. Switch to For You, or follow a few more people."
+                          : 'Start sharing your faith. Community posts will appear here.'}
+                      </p>
                     </div>
                   )}
 
                   {/* Social Feed List */}
-                  {visiblePosts.map(post => renderPostCard(post))}
+                  {homeFeedPosts.map(post => renderPostCard(post))}
                 </div>
               )}
 
