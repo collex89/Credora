@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BIBLE_BOOKS, SAINTS, SAINT_CATEGORIES, AUDIO_TRACKS, STORIES } from './data/mockData';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import * as api from './lib/api';
-import { loadBibleChapter } from './lib/bible';
+import { loadBibleChapter, BIBLE_VERSIONS } from './lib/bible';
 import { getDailyVerse } from './data/dailyVerses';
 import { PRIVACY_POLICY, TERMS_OF_SERVICE } from './data/legalContent';
 import { MISSION, ABOUT_FEATURES, CONTENT_SOURCING_NOTE } from './data/aboutContent';
@@ -580,6 +580,8 @@ export default function App() {
   const [chapterGridBook, setChapterGridBook] = useState(null); // book awaiting a chapter pick
   const [chapterVerses, setChapterVerses] = useState([]);
   const [versesLoading, setVersesLoading] = useState(true);
+  const [bibleVersion, setBibleVersion] = useState('dr'); // see BIBLE_VERSIONS
+  const [versionPickerOpen, setVersionPickerOpen] = useState(false);
 
   // Prayers Dashboard States — streak/calendar are computed from real
   // prayer_logs history in live mode (see api.computeStreak/computeWeekCalendar),
@@ -728,14 +730,14 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     setVersesLoading(true);
-    loadBibleChapter(selectedBook.id, selectedChapter).then(verses => {
+    loadBibleChapter(selectedBook.id, selectedChapter, bibleVersion).then(verses => {
       if (!cancelled) {
         setChapterVerses(verses);
         setVersesLoading(false);
       }
     });
     return () => { cancelled = true; };
-  }, [selectedBook, selectedChapter]);
+  }, [selectedBook, selectedChapter, bibleVersion]);
 
   // 2b. Track the Supabase auth session (live mode only)
   useEffect(() => {
@@ -4305,11 +4307,48 @@ export default function App() {
                     </div>
 
                     <div className="bible-adjust-row">
+                      <button className="version-picker-btn" onClick={() => setVersionPickerOpen(true)}>
+                        {BIBLE_VERSIONS.find(v => v.id === bibleVersion)?.shortName || 'DR'}
+                        <Icons.ChevronDown />
+                      </button>
                       <button className={`icon-btn ${bibleSettingsOpen ? 'active' : ''}`} onClick={() => setBibleSettingsOpen(!bibleSettingsOpen)}>
                         <Icons.Adjust />
                       </button>
                     </div>
                   </div>
+
+                  {versionPickerOpen && (
+                    <>
+                      <div className="version-picker-scrim" onClick={() => setVersionPickerOpen(false)} />
+                      <div className="version-picker-sheet">
+                        <div className="welcome-sheet-header">
+                          <h3 className="welcome-sheet-title" style={{ marginBottom: 0 }}>Bible Version</h3>
+                          <button className="icon-btn" onClick={() => setVersionPickerOpen(false)} aria-label="Close">
+                            <Icons.Close />
+                          </button>
+                        </div>
+                        <p className="welcome-sheet-desc">
+                          Douay-Rheims, KJV, and WEB are complete and work offline. NKJV, RSV, and Good News Translation are still under copyright, so we can only add them through a licensed Bible API — that's next.
+                        </p>
+                        <div className="version-picker-list">
+                          {BIBLE_VERSIONS.map(v => (
+                            <button
+                              key={v.id}
+                              className={`version-picker-item ${v.id === bibleVersion ? 'active' : ''} ${!v.available ? 'disabled' : ''}`}
+                              disabled={!v.available}
+                              onClick={() => { setBibleVersion(v.id); setVersionPickerOpen(false); }}
+                            >
+                              <span>
+                                <span className="version-picker-item-name">{v.name}</span>
+                                <span className="version-picker-item-short">{v.shortName}</span>
+                              </span>
+                              {v.id === bibleVersion ? <Icons.Check /> : !v.available && <span className="version-picker-soon">Coming soon</span>}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   {/* Bible Text Settings Drawer */}
                   {bibleSettingsOpen && (
@@ -4373,6 +4412,12 @@ export default function App() {
                           <Icons.ChevronDown />
                         </button>
                       </div>
+
+                      {bibleVersion !== 'dr' && selectedBook.category === 'Deuterocanonical' && (
+                        <p className="version-fallback-note">
+                          {BIBLE_VERSIONS.find(v => v.id === bibleVersion)?.shortName} doesn't include {selectedBook.name} — showing Douay-Rheims instead.
+                        </p>
+                      )}
 
                       <div className="bible-text-display">
                         {versesLoading ? (

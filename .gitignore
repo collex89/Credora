@@ -39,3 +39,5 @@ scripts/*.bak2
 scripts/dr_source.txt
 scripts/parse-report.txt
 scripts_tmp_dr_source.txt
+scripts/src_tmp/
+scripts/parse-versions-report.txt
