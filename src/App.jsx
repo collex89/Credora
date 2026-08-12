@@ -810,6 +810,20 @@ export default function App() {
     let cancelled = false;
     (async () => {
       const profile = await api.fetchMyProfile(session.user.id);
+      if (cancelled) return;
+      if (!profile) {
+        // A session that still passes auth but whose profile row is gone --
+        // the account was deleted (deleteMyAccount signs out immediately
+        // now, but a session cached from before that fix, or deleted by
+        // some other path, can still land here). Rather than silently
+        // logging in as a blank/default "Catholic Pilgrim" profile, treat
+        // it the same as not being signed in at all.
+        if (isSupabaseConfigured) await api.signOut();
+        setSession(null);
+        setIsLoggedIn(false);
+        setAuthKnown(true);
+        return;
+      }
       const [community, feed, followerCount, notifs, convos, unreadMsgs, logs, intentions, myBlocks, myMutes, highlights, bookmarks] = await Promise.all([
         api.fetchCommunity(session.user.id),
         api.fetchFeed(session.user.id),
@@ -825,16 +839,14 @@ export default function App() {
         api.fetchBibleBookmarks(session.user.id)
       ]);
       if (cancelled) return;
-      if (profile) {
-        setUsername(profile.full_name || profile.username);
-        setMyUsername(profile.username);
-        setParish(profile.parish || '');
-        setBio(profile.bio || '');
-        setMyAvatar(profile.avatar_url || api.fallbackAvatar(profile.full_name || profile.username));
-        setMyIsVerified(!!profile.is_verified);
-        if (profile.reminder_times) setReminders(prev => ({ ...prev, ...profile.reminder_times }));
-        if (profile.reminders_enabled) setRemindersEnabled(profile.reminders_enabled);
-      }
+      setUsername(profile.full_name || profile.username);
+      setMyUsername(profile.username);
+      setParish(profile.parish || '');
+      setBio(profile.bio || '');
+      setMyAvatar(profile.avatar_url || api.fallbackAvatar(profile.full_name || profile.username));
+      setMyIsVerified(!!profile.is_verified);
+      if (profile.reminder_times) setReminders(prev => ({ ...prev, ...profile.reminder_times }));
+      if (profile.reminders_enabled) setRemindersEnabled(profile.reminders_enabled);
       if (community) setUsers(community);
       setPosts(feed || []);
       setMyFollowerCount(followerCount);
@@ -1918,15 +1930,53 @@ export default function App() {
     }
   };
 
+  // Clears everything that identifies "who's signed in" -- both the
+  // account/profile fields and the auth form's own inputs. Used after
+  // sign-out and account deletion so the next person to open the auth
+  // flow on this device starts from a genuinely blank slate, not the
+  // previous account's email/password still sitting in the form or its
+  // name/avatar flashing before a new session loads.
+  const resetLocalIdentityState = () => {
+    setSession(null);
+    setUsername('');
+    setMyUsername('');
+    setMyAvatar(api.fallbackAvatar(''));
+    setMyIsVerified(false);
+    setParish('');
+    setBio('');
+    setEmail('');
+    setPassword('');
+    setShowPassword(false);
+    setRegUsername('');
+    setAgreedToTerms(false);
+    setAuthError('');
+    setAuthNotice('');
+    setAuthMode('login');
+    setWelcomeStage('hero');
+  };
+
   const handleDeleteAccount = async () => {
     if (deleteAccountConfirmText !== 'DELETE') return;
     setDeleteAccountError('');
     setDeletingAccount(true);
     try {
-      const { error } = await api.deleteMyAccount();
-      if (error) { setDeleteAccountError(error.message); return; }
+      // deleteMyAccount() talks to the real Supabase client, which doesn't
+      // exist in demo mode (see src/lib/supabase.js) -- there's no server
+      // account to delete there anyway, so just clear local state below.
+      if (isSupabaseConfigured) {
+        const { error } = await api.deleteMyAccount();
+        if (error) { setDeleteAccountError(error.message); return; }
+        // deleteMyAccount() removes the account server-side but doesn't
+        // sign the client out -- Supabase caches the session in
+        // localStorage, so without this the next reload finds that
+        // still-valid stale session and logs back in as a profile that no
+        // longer exists (see the 2c effect's profile-null handling for
+        // the other half of this).
+        await api.signOut();
+      }
       setIsLoggedIn(false);
       setDeleteAccountOpen(false);
+      resetLocalIdentityState();
     } finally {
       setDeletingAccount(false);
     }
@@ -3823,6 +3873,7 @@ export default function App() {
                       if (isSupabaseConfigured) api.signOut();
                       setSettingsOpen(false);
                       setIsLoggedIn(false);
+                      resetLocalIdentityState();
                     }}>
                       <span><Icons.LogOut /> Sign Out</span>
                     </button>
