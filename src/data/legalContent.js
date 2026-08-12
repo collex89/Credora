@@ -26,7 +26,7 @@ To provide the app's core features: your feed, prayer tracking, messaging, and c
 
 3. WHERE YOUR DATA LIVES
 
-Your account and content are stored with Supabase, our backend provider, which encrypts data in transit and at rest. Bible text, saint biographies, and audio content shown in the app are sourced from public-domain and Creative Commons-licensed sources (Project Gutenberg, Wikipedia/Wikimedia Commons, LibriVox, Internet Archive). Using these features doesn't share your personal data with those sources.
+Your account and content are stored with Supabase, our backend provider, which encrypts data in transit and at rest. Bible text, Saint biographies, and audio content shown in the app are sourced from public-domain and Creative Commons-licensed sources (Project Gutenberg, Wikipedia/Wikimedia Commons, LibriVox, Internet Archive). Using these features doesn't share your personal data with those sources.
 
 4. DIRECT MESSAGES
 
@@ -64,7 +64,7 @@ You must be at least 13 years old to use Crescamus. By creating an account, you 
 
 2. YOUR ACCOUNT
 
-You're responsible for the security of your account and everything that happens under it. Usernames are unique, one per person, and impersonating another individual, saint, cleric, or organization is not permitted.
+You're responsible for the security of your account and everything that happens under it. Usernames are unique, one per person, and impersonating another individual, Saint, cleric, or organization is not permitted.
 
 3. YOUR CONTENT
 
@@ -80,7 +80,7 @@ You can report posts or accounts that violate these standards, and block any use
 
 6. RELIGIOUS AND EDUCATIONAL CONTENT
 
-Scripture text, saint biographies, and audio content provided in the app are sourced from public-domain works and appropriately licensed Creative Commons sources, with attribution shown in the app where applicable. This content is provided for devotional and educational purposes.
+Scripture text, Saint biographies, and audio content provided in the app are sourced from public-domain works and appropriately licensed Creative Commons sources, with attribution shown in the app where applicable. This content is provided for devotional and educational purposes.
 
 7. NO WARRANTY
 

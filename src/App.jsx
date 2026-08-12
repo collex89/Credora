@@ -1458,7 +1458,7 @@ export default function App() {
             <div className="feed-user-name">
               {post.user.name} {post.user.isVerified && <Icons.Verified />} <span className="feed-username">@{post.user.username}</span>
             </div>
-            <div className="feed-user-parish"><Icons.Church /> {post.user.parish}</div>
+            {post.user.parish && <div className="feed-user-parish"><Icons.Church /> {post.user.parish}</div>}
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1710,7 +1710,7 @@ export default function App() {
             name: username || 'Catholic Pilgrim',
             username: myUsername || 'pilgrim',
             avatar: myAvatar,
-            parish: parish || 'St. Jude Parish, Atlanta',
+            parish,
             isVerified: myIsVerified
           },
           time: 'Just now',
@@ -2383,7 +2383,7 @@ export default function App() {
           results.push({
             type: 'Person',
             title: u.name,
-            subtitle: `@${u.username} • ${u.parish}`,
+            subtitle: u.parish ? `@${u.username} • ${u.parish}` : `@${u.username}`,
             action: () => openPersonProfile(u.id)
           });
         }
@@ -2659,7 +2659,7 @@ export default function App() {
 
               <h1 className="welcome-title">Crescamus</h1>
               <p className="welcome-tagline">Growing Together in Christ</p>
-              <p className="welcome-vibe">Come as you are. Sit with Scripture, walk with the saints, let sacred music still your heart, and grow alongside people who are actually praying, not just posting.</p>
+              <p className="welcome-vibe">Come as you are. Sit with Scripture, walk with the Saints, let sacred music still your heart, and grow alongside people who are actually praying, not just posting.</p>
             </div>
 
             <div className="welcome-action-slot">
@@ -3026,7 +3026,7 @@ export default function App() {
                   <input
                     type="text"
                     className="search-input-field"
-                    placeholder="Search people, bible verses, saints, audio..."
+                    placeholder="Search people, bible verses, Saints, audio..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     autoFocus
@@ -3126,8 +3126,8 @@ export default function App() {
                   <button
                     className="saint-details-share-btn"
                     onClick={() => shareSaintLink(activeSaint)}
-                    aria-label="Copy link to this saint"
-                    title="Copy link to this saint"
+                    aria-label="Copy link to this Saint"
+                    title="Copy link to this Saint"
                   >
                     {copiedSaintShare ? <Icons.Check /> : <Icons.Share />}
                   </button>
@@ -3229,7 +3229,7 @@ export default function App() {
                         {person.isVerified && <Icons.Verified size={16} />}
                       </h3>
                       <div className="username-text">@{person.username}</div>
-                      <div className="profile-parish"><Icons.Church /> {person.parish}</div>
+                      {person.parish && <div className="profile-parish"><Icons.Church /> {person.parish}</div>}
                       <p className="profile-bio">{person.bio}</p>
 
                       <div className="profile-stats-row">
@@ -3852,7 +3852,7 @@ export default function App() {
                             <div className="feed-user-name">
                               {detailPost.user.name} {detailPost.user.isVerified && <Icons.Verified />} <span className="feed-username">@{detailPost.user.username}</span>
                             </div>
-                            <div className="feed-user-parish"><Icons.Church /> {detailPost.user.parish}</div>
+                            {detailPost.user.parish && <div className="feed-user-parish"><Icons.Church /> {detailPost.user.parish}</div>}
                           </div>
                         </div>
                         <span className="feed-time">{detailPost.time}</span>
@@ -4099,7 +4099,7 @@ export default function App() {
                           <div className="feed-user-name">
                             {quoteReshareTarget.user.name} {quoteReshareTarget.user.isVerified && <Icons.Verified />}
                           </div>
-                          <div className="feed-user-parish"><Icons.Church /> {quoteReshareTarget.user.parish}</div>
+                          {quoteReshareTarget.user.parish && <div className="feed-user-parish"><Icons.Church /> {quoteReshareTarget.user.parish}</div>}
                         </div>
                       </div>
                     </div>
@@ -4777,7 +4777,7 @@ export default function App() {
                       {myIsVerified && <Icons.Verified size={16} />}
                     </h3>
                     <div className="username-text">@{myUsername || 'pilgrim'}</div>
-                    <div className="profile-parish"><Icons.Church /> {parish || 'St. Jude Parish, Atlanta'}</div>
+                    {parish && <div className="profile-parish"><Icons.Church /> {parish}</div>}
                     <p className="profile-bio">{bio}</p>
 
                     <div className="profile-stats-row">

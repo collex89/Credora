@@ -2,7 +2,7 @@
 // and dailyVerses.js are, so the actual words can be edited without touching
 // component logic.
 
-export const MISSION = `Crescamus comes from the Latin for "let us grow." It's built to help you grow in faith through Scripture, prayer, the lives of the saints, and a community doing the same.`;
+export const MISSION = `Crescamus comes from the Latin for "let us grow." It's built to help you grow in faith through Scripture, prayer, the lives of the Saints, and a community doing the same.`;
 
 // icon refers to a key in the Icons object in App.jsx.
 export const ABOUT_FEATURES = [
@@ -19,7 +19,7 @@ export const ABOUT_FEATURES = [
   {
     icon: 'Sparkles',
     title: 'Saints',
-    description: 'Explore the life stories, feast days, and quotes of the saints.'
+    description: 'Explore the life stories, feast days, and quotes of the Saints.'
   },
   {
     icon: 'Audio',
@@ -33,4 +33,4 @@ export const ABOUT_FEATURES = [
   }
 ];
 
-export const CONTENT_SOURCING_NOTE = `Scripture, saint biographies, and audio are drawn from public-domain and Creative Commons sources (Wikipedia/Wikimedia Commons, LibriVox, Internet Archive), with attribution shown in the app where it applies.`;
+export const CONTENT_SOURCING_NOTE = `Scripture, Saint biographies, and audio are drawn from public-domain and Creative Commons sources (Wikipedia/Wikimedia Commons, LibriVox, Internet Archive), with attribution shown in the app where it applies.`;
