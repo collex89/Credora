@@ -577,7 +577,18 @@ export default function App() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   // Global Settings States
-  const [theme, setTheme] = useState('light'); // 'light' | 'dark'
+  // Was plain useState('light') with nothing writing it back anywhere, so
+  // switching to dark mode never survived a reload or a new day's session
+  // -- it silently reset to light every time. Read the saved choice back
+  // on load, falling back to 'light' the same as before if nothing's been
+  // saved yet.
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem('crescamus-theme') === 'dark' ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
+  });
   const [bibleFontSize, setBibleFontSize] = useState(16);
   const [bibleSettingsOpen, setBibleSettingsOpen] = useState(false);
 
@@ -733,9 +744,16 @@ export default function App() {
     setSubView('saints');
   }, []);
 
-  // 2. Synchronize theme styling variables
+  // 2. Synchronize theme styling variables, and remember the choice so it's
+  // still there next time instead of quietly reverting to light.
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    try {
+      localStorage.setItem('crescamus-theme', theme);
+    } catch {
+      // Private browsing / storage disabled -- theme just won't persist,
+      // not worth surfacing an error for.
+    }
   }, [theme]);
 
   // 2z. Close the post "..." menu when clicking anywhere else
