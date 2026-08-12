@@ -2611,89 +2611,99 @@ export default function App() {
           </div>
         )}
 
-        {/* ------------------ VIEW 2a: WELCOME HERO + GET STARTED SHEET ------------------ */}
-        {!splashActive && !isLoggedIn && !passwordRecoveryMode && welcomeStage !== 'form' && (
-          <div className="welcome-container">
-            <div className="hero-orbit-wrap">
-              <div className="hero-orbit-ring hero-orbit-ring--outer" />
-              <div className="hero-orbit-ring hero-orbit-ring--inner" />
-              <div className="hero-orbit-spinner">
-                {ABOUT_FEATURES.map((feature, i) => {
-                  const angle = (360 / ABOUT_FEATURES.length) * i;
-                  const FeatureIcon = Icons[feature.icon];
-                  return (
-                    <div key={feature.title} className="hero-orbit-item" style={{ transform: `rotate(${angle}deg) translateY(-124px) rotate(${-angle}deg)` }}>
-                      <div className={`hero-orbit-badge hero-orbit-badge--${i}`} title={feature.title}>
-                        {FeatureIcon && <FeatureIcon />}
+        {/* ------------------ VIEW 2: WELCOME HERO + AUTH FLOW ------------------
+            One shared shell for all three pre-auth stages (hero, chooser,
+            form) instead of two separate top-level views: the branding
+            (orbit/title/tagline) needs to stay mounted and visible across
+            all three stages on desktop, where it becomes a persistent left
+            column next to a right-hand action card -- Instagram/Facebook's
+            desktop login layout, rather than the mobile pattern of the form
+            fully replacing the hero screen. On mobile this renders
+            identically to the old two-view layout (see .auth-shell in
+            index.css): the branding still disappears once the form stage is
+            reached, and the chooser still slides up as a bottom sheet. */}
+        {!splashActive && !isLoggedIn && !passwordRecoveryMode && (
+          <div className={`auth-shell ${welcomeStage === 'form' ? 'stage-form' : ''}`}>
+            <div className="welcome-branding-group">
+              <div className="hero-orbit-wrap">
+                <div className="hero-orbit-ring hero-orbit-ring--outer" />
+                <div className="hero-orbit-ring hero-orbit-ring--inner" />
+                <div className="hero-orbit-spinner">
+                  {ABOUT_FEATURES.map((feature, i) => {
+                    const angle = (360 / ABOUT_FEATURES.length) * i;
+                    const FeatureIcon = Icons[feature.icon];
+                    return (
+                      <div key={feature.title} className="hero-orbit-item" style={{ transform: `rotate(${angle}deg) translateY(-124px) rotate(${-angle}deg)` }}>
+                        <div className={`hero-orbit-badge hero-orbit-badge--${i}`} title={feature.title}>
+                          {FeatureIcon && <FeatureIcon />}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+                <div className="hero-center-mark">
+                  <img src="/logo.svg" alt="Crescamus logo" />
+                </div>
               </div>
-              <div className="hero-center-mark">
-                <img src="/logo.svg" alt="Crescamus logo" />
-              </div>
+
+              <h1 className="welcome-title">Crescamus</h1>
+              <p className="welcome-tagline">Growing Together in Christ</p>
+              <p className="welcome-vibe">Come as you are. Sit with Scripture, walk with the saints, let sacred music still your heart, and grow alongside people who are actually praying, not just posting.</p>
             </div>
 
-            <h1 className="welcome-title">Crescamus</h1>
-            <p className="welcome-tagline">Growing Together in Christ</p>
-            <p className="welcome-vibe">Come as you are. Sit with Scripture, walk with the saints, let sacred music still your heart, and grow alongside people who are actually praying, not just posting.</p>
+            <div className="welcome-action-slot">
+              {welcomeStage === 'hero' && (
+                <button className="auth-btn welcome-get-started-btn" onClick={() => setWelcomeStage('chooser')}>
+                  Get Started
+                </button>
+              )}
 
-            {welcomeStage === 'hero' && (
-              <button className="auth-btn welcome-get-started-btn" onClick={() => setWelcomeStage('chooser')}>
-                Get Started
-              </button>
-            )}
+              {welcomeStage === 'chooser' && (
+                <>
+                  <div className="welcome-scrim animate-fade-in" onClick={() => setWelcomeStage('hero')} />
+                  <div className="welcome-sheet">
+                    <div className="welcome-sheet-header">
+                      <span className="welcome-sheet-icon"><Icons.Sparkles /></span>
+                      <button className="icon-btn" onClick={() => setWelcomeStage('hero')} aria-label="Close">
+                        <Icons.Close />
+                      </button>
+                    </div>
+                    <h3 className="welcome-sheet-title">Get Started</h3>
+                    <p className="welcome-sheet-desc">
+                      Sign in or create an account to begin praying, reading Scripture, and growing with the community.
+                    </p>
 
-            {welcomeStage === 'chooser' && (
-              <>
-                <div className="welcome-scrim animate-fade-in" onClick={() => setWelcomeStage('hero')} />
-                <div className="welcome-sheet">
-                  <div className="welcome-sheet-header">
-                    <span className="welcome-sheet-icon"><Icons.Sparkles /></span>
-                    <button className="icon-btn" onClick={() => setWelcomeStage('hero')} aria-label="Close">
-                      <Icons.Close />
+                    <button className="auth-btn" onClick={() => setWelcomeStage('form')}>
+                      Continue with Email
                     </button>
+
+                    <div className="welcome-sheet-social-row">
+                      <button className="social-auth-btn" onClick={async () => {
+                        if (isSupabaseConfigured) {
+                          const { error } = await api.signInWithProvider('google');
+                          if (error) setAuthError(error.message);
+                          return;
+                        }
+                        setUsername("Google Christian"); setMyUsername(generateUniqueUsername("google.christian")); setIsLoggedIn(true);
+                      }}>
+                        <Icons.Globe />
+                      </button>
+                      <button className="social-auth-btn" onClick={async () => {
+                        if (isSupabaseConfigured) {
+                          const { error } = await api.signInWithProvider('apple');
+                          if (error) setAuthError(error.message);
+                          return;
+                        }
+                        setUsername("Apple Catholic"); setMyUsername(generateUniqueUsername("apple.catholic")); setIsLoggedIn(true);
+                      }}>
+                        <Icons.Apple />
+                      </button>
+                    </div>
                   </div>
-                  <h3 className="welcome-sheet-title">Get Started</h3>
-                  <p className="welcome-sheet-desc">
-                    Sign in or create an account to begin praying, reading Scripture, and growing with the community.
-                  </p>
+                </>
+              )}
 
-                  <button className="auth-btn" onClick={() => setWelcomeStage('form')}>
-                    Continue with Email
-                  </button>
-
-                  <div className="welcome-sheet-social-row">
-                    <button className="social-auth-btn" onClick={async () => {
-                      if (isSupabaseConfigured) {
-                        const { error } = await api.signInWithProvider('google');
-                        if (error) setAuthError(error.message);
-                        return;
-                      }
-                      setUsername("Google Christian"); setMyUsername(generateUniqueUsername("google.christian")); setIsLoggedIn(true);
-                    }}>
-                      <Icons.Globe />
-                    </button>
-                    <button className="social-auth-btn" onClick={async () => {
-                      if (isSupabaseConfigured) {
-                        const { error } = await api.signInWithProvider('apple');
-                        if (error) setAuthError(error.message);
-                        return;
-                      }
-                      setUsername("Apple Catholic"); setMyUsername(generateUniqueUsername("apple.catholic")); setIsLoggedIn(true);
-                    }}>
-                      <Icons.Apple />
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ------------------ VIEW 2b: AUTH FORM ------------------ */}
-        {!splashActive && !isLoggedIn && !passwordRecoveryMode && welcomeStage === 'form' && (
+              {welcomeStage === 'form' && (
           <div className="auth-container has-topbar scrollable animate-fade-in">
             <div className="auth-topbar">
               <button className="icon-btn" onClick={() => setWelcomeStage('chooser')} aria-label="Back">
@@ -2857,6 +2867,9 @@ export default function App() {
             {!isSupabaseConfigured && (
               <p className="demo-note">Demo mode — accounts are not saved yet. See SUPABASE_SETUP.md to connect your database.</p>
             )}
+            </div>
+          </div>
+              )}
             </div>
           </div>
         )}

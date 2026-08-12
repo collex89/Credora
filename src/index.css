@@ -143,23 +143,22 @@ body {
    (pointer: fine) so a tablet, which is just as wide, still gets the
    normal mobile layout either way. */
 @media (hover: hover) and (pointer: fine) and (min-width: 640px) {
-  /* Signed out (splash/welcome/auth forms): there's no sidebar to share
-     the screen with, so these read best as a centered narrow card, the
-     way most mobile-first web apps present their login screen on
-     desktop -- stretching a login form edge-to-edge looks broken, not
-     "responsive". Harmless to set unconditionally: when .app-mode is
-     active instead, that variant is full-bleed 100vw/100vh, so the body
-     behind it is never actually visible. */
   body {
     background-color: #EAE6D9;
   }
+
+  /* Signed out (splash/welcome/auth forms): a two-column hero, the way
+     Instagram/Facebook lay out their desktop login page -- branding on the
+     left, the current step's action card on the right -- instead of just
+     centering the mobile layout in a narrow floating card. Full-bleed like
+     .app-mode; .auth-shell below does its own centering internally. */
   .device-container.auth-mode {
-    width: 480px;
-    height: calc(100vh - 80px);
-    height: calc(100svh - 80px);
-    margin: 40px auto;
-    border-radius: 20px;
-    box-shadow: 0 24px 60px -20px rgba(27, 35, 48, 0.35);
+    width: 100vw;
+    height: 100vh;
+    height: 100svh;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   /* Signed in: a persistent left sidebar next to a comfortably-wide,
@@ -595,7 +594,12 @@ p {
 /* ----------------------------------------------------
    Welcome Hero + Get Started Sheet (pre-auth)
    ---------------------------------------------------- */
-.welcome-container {
+/* Shared shell for all three pre-auth stages (hero/chooser/form). On mobile
+   this behaves exactly like the old single .welcome-container: branding and
+   the current stage's action content stack as one visually-centered unit,
+   and the branding disappears once the form stage is reached (the form
+   takes the full screen, same as before -- see .stage-form below). */
+.auth-shell {
   position: relative;
   height: 100%;
   display: flex;
@@ -604,7 +608,108 @@ p {
   justify-content: center;
   padding: 32px 24px;
   overflow: hidden;
+}
+
+.welcome-branding-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   animation: fadeIn 0.4s ease-out;
+}
+
+.auth-shell.stage-form .welcome-branding-group {
+  display: none;
+}
+
+.welcome-action-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.auth-shell.stage-form {
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0;
+}
+
+.auth-shell.stage-form .welcome-action-slot {
+  flex: 1;
+  min-height: 0;
+}
+
+.auth-shell.stage-form .auth-container {
+  height: 100%;
+}
+
+/* Desktop: two-column hero (Instagram/Facebook-style login layout) instead
+   of the mobile single centered column -- branding stays on the left
+   across all three stages, the current stage's action content is a card
+   on the right. Placed after the base rules above (not inside the earlier
+   .device-container media query) so these equal-specificity overrides
+   actually win the cascade instead of being shadowed by them. */
+@media (hover: hover) and (pointer: fine) and (min-width: 640px) {
+  .auth-shell {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 72px;
+    padding: 40px;
+  }
+  .auth-shell.stage-form {
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+  .auth-shell.stage-form .welcome-action-slot {
+    flex: none;
+  }
+  .auth-shell.stage-form .auth-container {
+    height: auto;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  /* Always visible on desktop, unlike the mobile stage-form rule above
+     that hides it once the form is reached -- same selector specificity,
+     later in the source, so this wins. */
+  .auth-shell.stage-form .welcome-branding-group {
+    display: flex;
+  }
+
+  .welcome-branding-group {
+    flex: 0 1 440px;
+  }
+
+  .welcome-action-slot {
+    flex: 0 0 400px;
+    width: 400px;
+    position: relative;
+  }
+
+  /* The chooser reads as a bottom sheet on mobile; on desktop it's just
+     the action card in the right column, so the overlay chrome goes away. */
+  .welcome-scrim {
+    display: none;
+  }
+  .welcome-sheet {
+    position: static;
+    width: 100%;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border);
+    animation: none;
+    padding: 28px;
+  }
+
+  .auth-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 36px;
+  }
 }
 
 .hero-orbit-wrap {
