@@ -179,6 +179,17 @@ const Icons = {
       <path d="M10 2c1 .5 2 2 2 5"/>
     </svg>
   ),
+  // The real Google "G" mark (Google's own brand guidelines require the
+  // full-color mark, not a generic globe icon, on a "Sign in with Google"
+  // button) -- standard four-color path data.
+  Google: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
+      <path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.88c2.27-2.09 3.57-5.17 3.57-8.82Z"/>
+      <path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.95-2.91l-3.88-3c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.27v3.09A12 12 0 0 0 12 24Z"/>
+      <path fill="#FBBC05" d="M5.27 14.28A7.2 7.2 0 0 1 4.89 12c0-.79.14-1.56.38-2.28V6.63H1.27A12 12 0 0 0 0 12c0 1.94.46 3.77 1.27 5.37l4-3.09Z"/>
+      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.69 1.27 6.63l4 3.09C6.22 6.86 8.87 4.75 12 4.75Z"/>
+    </svg>
+  ),
   Sparkles: () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>
@@ -2678,7 +2689,7 @@ export default function App() {
                     </button>
 
                     <div className="welcome-sheet-social-row">
-                      <button className="social-auth-btn" onClick={async () => {
+                      <button className="social-auth-btn" aria-label="Continue with Google" onClick={async () => {
                         if (isSupabaseConfigured) {
                           const { error } = await api.signInWithProvider('google');
                           if (error) setAuthError(error.message);
@@ -2686,7 +2697,7 @@ export default function App() {
                         }
                         setUsername("Google Christian"); setMyUsername(generateUniqueUsername("google.christian")); setIsLoggedIn(true);
                       }}>
-                        <Icons.Globe />
+                        <Icons.Google />
                       </button>
                       <button className="social-auth-btn" onClick={async () => {
                         if (isSupabaseConfigured) {
@@ -3766,22 +3777,6 @@ export default function App() {
                       Terms of Service
                     </button>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* ------------------ VIEW: PRIVACY POLICY / TERMS OF SERVICE ------------------ */}
-            {legalView && (
-              <div className="saint-details-view">
-                <div className="person-view-header">
-                  <button className="icon-btn" onClick={() => setLegalView(null)}>
-                    <Icons.ChevronLeft />
-                  </button>
-                  <h3>{legalView === 'privacy' ? 'Privacy Policy' : 'Terms of Service'}</h3>
-                  <div style={{ width: '24px' }}></div>
-                </div>
-                <div className="scrollable">
-                  <pre className="legal-text">{legalView === 'privacy' ? PRIVACY_POLICY : TERMS_OF_SERVICE}</pre>
                 </div>
               </div>
             )}
@@ -5050,6 +5045,27 @@ export default function App() {
               </button>
             </div>
           </>
+        )}
+
+        {/* ------------------ VIEW: PRIVACY POLICY / TERMS OF SERVICE ------------------
+            Rendered here, outside the isLoggedIn fragment, because the
+            register form's Terms/Privacy links (in the signed-out auth
+            flow) call setLegalView too -- nested inside the logged-in-only
+            fragment, clicking those links from the register form silently
+            did nothing, since the whole modal simply wasn't mounted yet. */}
+        {legalView && (
+          <div className="saint-details-view">
+            <div className="person-view-header">
+              <button className="icon-btn" onClick={() => setLegalView(null)}>
+                <Icons.ChevronLeft />
+              </button>
+              <h3>{legalView === 'privacy' ? 'Privacy Policy' : 'Terms of Service'}</h3>
+              <div style={{ width: '24px' }}></div>
+            </div>
+            <div className="scrollable">
+              <pre className="legal-text">{legalView === 'privacy' ? PRIVACY_POLICY : TERMS_OF_SERVICE}</pre>
+            </div>
+          </div>
         )}
       </div>
     </div>

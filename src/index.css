@@ -655,69 +655,6 @@ p {
    on the right. Placed after the base rules above (not inside the earlier
    .device-container media query) so these equal-specificity overrides
    actually win the cascade instead of being shadowed by them. */
-@media (hover: hover) and (pointer: fine) and (min-width: 640px) {
-  .auth-shell {
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: 72px;
-    padding: 40px;
-  }
-  .auth-shell.stage-form {
-    align-items: center;
-    justify-content: center;
-    padding: 40px;
-  }
-  .auth-shell.stage-form .welcome-action-slot {
-    flex: none;
-  }
-  .auth-shell.stage-form .auth-container {
-    height: auto;
-    max-height: 85vh;
-    overflow-y: auto;
-  }
-
-  /* Always visible on desktop, unlike the mobile stage-form rule above
-     that hides it once the form is reached -- same selector specificity,
-     later in the source, so this wins. */
-  .auth-shell.stage-form .welcome-branding-group {
-    display: flex;
-  }
-
-  .welcome-branding-group {
-    flex: 0 1 440px;
-  }
-
-  .welcome-action-slot {
-    flex: 0 0 400px;
-    width: 400px;
-    position: relative;
-  }
-
-  /* The chooser reads as a bottom sheet on mobile; on desktop it's just
-     the action card in the right column, so the overlay chrome goes away. */
-  .welcome-scrim {
-    display: none;
-  }
-  .welcome-sheet {
-    position: static;
-    width: 100%;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border);
-    animation: none;
-    padding: 28px;
-  }
-
-  .auth-container {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
-    padding: 36px;
-  }
-}
-
 .hero-orbit-wrap {
   position: relative;
   width: 280px;
@@ -883,6 +820,81 @@ p {
 .welcome-sheet-social-row .social-auth-btn {
   flex: 1;
   margin-bottom: 0;
+}
+
+/* Desktop: two-column hero (Instagram/Facebook-style login layout) instead
+   of the mobile single centered column -- branding stays on the left
+   across all three stages, the current stage's action content is a card
+   on the right. Placed after ALL the base rules above it touches
+   (.auth-shell, .auth-container, .welcome-sheet/.welcome-scrim) -- not
+   inside the earlier .device-container media query -- so these
+   equal-specificity overrides actually win the cascade instead of being
+   silently shadowed by rules that happen to come later in the file. */
+@media (hover: hover) and (pointer: fine) and (min-width: 640px) {
+  .auth-shell {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 64px;
+    padding: 40px;
+  }
+  .auth-shell.stage-form {
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+  .auth-shell.stage-form .welcome-action-slot {
+    flex: none;
+  }
+  .auth-shell.stage-form .auth-container {
+    height: auto;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  /* Always visible on desktop, unlike the mobile stage-form rule above
+     that hides it once the form is reached -- same selector specificity,
+     later in the source, so this wins. */
+  .auth-shell.stage-form .welcome-branding-group {
+    display: flex;
+  }
+
+  .welcome-branding-group {
+    flex: 0 1 440px;
+  }
+
+  /* Same width as the branding column so the pair reads as one balanced,
+     centered composition instead of a wide left side next to a
+     narrower, off-center-looking card. */
+  .welcome-action-slot {
+    flex: 0 0 440px;
+    width: 440px;
+    position: relative;
+  }
+
+  /* The chooser reads as a bottom sheet on mobile; on desktop it's just
+     the action card in the right column, so the overlay chrome goes away. */
+  .welcome-scrim {
+    display: none;
+  }
+  .welcome-sheet {
+    position: static;
+    width: 100%;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border);
+    animation: none;
+    padding: 32px;
+  }
+
+  .auth-container {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 40px;
+  }
 }
 
 @keyframes heroOrbitSpin {
