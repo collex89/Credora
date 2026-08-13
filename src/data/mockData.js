@@ -471,7 +471,7 @@ export const AUDIO_TRACKS = [
     category: "Gregorian Chant",
     duration: 190,
     url: "/audio/chant_salve.mp3",
-    cover: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&q=80&w=300",
+    cover: "/logo.svg",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Petits_Chanteurs_de_Passy_-_Salve_Regina_de_Hermann_Contract.ogg",
     license: "CC BY-SA 3.0"
   },
@@ -482,7 +482,7 @@ export const AUDIO_TRACKS = [
     category: "Gregorian Chant",
     duration: 71,
     url: "/audio/chant_avemaria.mp3",
-    cover: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&q=80&w=300",
+    cover: "/logo.svg",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Schola_Gregoriana-Ave_Maria.ogg",
     license: "CC BY-SA 3.0"
   },
@@ -493,7 +493,7 @@ export const AUDIO_TRACKS = [
     category: "Gregorian Chant",
     duration: 30,
     url: "/audio/chant_venicreator.mp3",
-    cover: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&q=80&w=300",
+    cover: "/logo.svg",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Veni.creator.spiritus.ogg",
     license: "Public domain"
   },
@@ -504,7 +504,7 @@ export const AUDIO_TRACKS = [
     category: "Hymns",
     duration: 236,
     url: "https://archive.org/download/CesarFranckPanisAngelicus/Franck-PanisAngelicus_64kb.mp3",
-    cover: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&q=80&w=300",
+    cover: "/logo.svg",
     sourceUrl: "https://archive.org/details/CesarFranckPanisAngelicus",
     license: "Public domain"
   },
@@ -515,7 +515,7 @@ export const AUDIO_TRACKS = [
     category: "Gregorian Chant",
     duration: 78,
     url: "/audio/hymn_almaredemptoris.mp3",
-    cover: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&q=80&w=300",
+    cover: "/logo.svg",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Alma_Redemptoris_Mater.ogg",
     license: "CC BY-SA 3.0"
   },
@@ -526,7 +526,7 @@ export const AUDIO_TRACKS = [
     category: "Gregorian Chant",
     duration: 75,
     url: "/audio/hymn_tantumergo.mp3",
-    cover: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&q=80&w=300",
+    cover: "/logo.svg",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Tantum_Ergo_I_Gregorian.ogg",
     license: "CC BY-SA 3.0"
   },
@@ -537,7 +537,7 @@ export const AUDIO_TRACKS = [
     category: "Gregorian Chant",
     duration: 75,
     url: "/audio/chant_paternoster.mp3",
-    cover: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&q=80&w=300",
+    cover: "/logo.svg",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Schola_Gregoriana-Pater_Noster.ogg",
     license: "CC BY-SA 3.0"
   },
@@ -548,7 +548,7 @@ export const AUDIO_TRACKS = [
     category: "Gregorian Chant",
     duration: 42,
     url: "/audio/chant_kyrie.mp3",
-    cover: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&q=80&w=300",
+    cover: "/logo.svg",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Schola_Gregoriana-Kyrie_eleison.ogg",
     license: "CC BY-SA 3.0"
   },
@@ -559,7 +559,7 @@ export const AUDIO_TRACKS = [
     category: "Rosary",
     duration: 1190,
     url: "https://archive.org/download/TheSoundOfTheRosary/JoyfulMysteries.mp3",
-    cover: "https://images.unsplash.com/photo-1438029071396-1e831a7fa6d8?auto=format&fit=crop&q=80&w=300",
+    cover: "/logo.svg",
     sourceUrl: "https://archive.org/details/TheSoundOfTheRosary",
     license: "CC0 (Public domain)"
   },
@@ -570,7 +570,7 @@ export const AUDIO_TRACKS = [
     category: "Rosary",
     duration: 1170,
     url: "https://archive.org/download/TheSoundOfTheRosary/SorrowfulMysteries.mp3",
-    cover: "https://images.unsplash.com/photo-1438029071396-1e831a7fa6d8?auto=format&fit=crop&q=80&w=300",
+    cover: "/logo.svg",
     sourceUrl: "https://archive.org/details/TheSoundOfTheRosary",
     license: "CC0 (Public domain)"
   },
@@ -581,7 +581,7 @@ export const AUDIO_TRACKS = [
     category: "Rosary",
     duration: 1201,
     url: "https://archive.org/download/TheSoundOfTheRosary/GloriousMysteries.mp3",
-    cover: "https://images.unsplash.com/photo-1438029071396-1e831a7fa6d8?auto=format&fit=crop&q=80&w=300",
+    cover: "/logo.svg",
     sourceUrl: "https://archive.org/details/TheSoundOfTheRosary",
     license: "CC0 (Public domain)"
   },
@@ -592,7 +592,7 @@ export const AUDIO_TRACKS = [
     category: "Rosary",
     duration: 1205,
     url: "https://archive.org/download/TheSoundOfTheRosary/LuminousMysteries.mp3",
-    cover: "https://images.unsplash.com/photo-1438029071396-1e831a7fa6d8?auto=format&fit=crop&q=80&w=300",
+    cover: "/logo.svg",
     sourceUrl: "https://archive.org/details/TheSoundOfTheRosary",
     license: "CC0 (Public domain)"
   },
@@ -603,7 +603,7 @@ export const AUDIO_TRACKS = [
     category: "Readings",
     duration: 4121,
     url: "https://archive.org/download/bible_dra_complete_2401_librivox/bible1899_001_dra.mp3",
-    cover: "https://images.unsplash.com/photo-1478147427282-58a87a120781?auto=format&fit=crop&q=80&w=300",
+    cover: "/logo.svg",
     sourceUrl: "https://archive.org/details/bible_dra_complete_2401_librivox",
     license: "Public domain (LibriVox)"
   },
@@ -614,7 +614,7 @@ export const AUDIO_TRACKS = [
     category: "Readings",
     duration: 4056,
     url: "https://archive.org/download/bible_dra_complete_2401_librivox/bible1899_111_dra.mp3",
-    cover: "https://images.unsplash.com/photo-1478147427282-58a87a120781?auto=format&fit=crop&q=80&w=300",
+    cover: "/logo.svg",
     sourceUrl: "https://archive.org/details/bible_dra_complete_2401_librivox",
     license: "Public domain (LibriVox)"
   },
@@ -625,7 +625,7 @@ export const AUDIO_TRACKS = [
     category: "Readings",
     duration: 1157,
     url: "https://archive.org/download/bible_dra_complete_2401_librivox/bible1899_136_dra.mp3",
-    cover: "https://images.unsplash.com/photo-1478147427282-58a87a120781?auto=format&fit=crop&q=80&w=300",
+    cover: "/logo.svg",
     sourceUrl: "https://archive.org/details/bible_dra_complete_2401_librivox",
     license: "Public domain (LibriVox)"
   }

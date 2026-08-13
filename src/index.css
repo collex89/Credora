@@ -2202,7 +2202,10 @@ input:checked + .slider:before {
   width: 48px;
   height: 48px;
   border-radius: var(--radius-sm);
-  object-fit: cover;
+  object-fit: contain;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 6px;
 }
 
 .track-title-detail h4 {
@@ -2247,7 +2250,10 @@ input:checked + .slider:before {
   width: 36px;
   height: 36px;
   border-radius: var(--radius-sm);
-  object-fit: cover;
+  object-fit: contain;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 4px;
   animation: spinSlow 15s linear infinite;
   animation-play-state: paused;
 }
@@ -2324,9 +2330,11 @@ input:checked + .slider:before {
   width: 220px;
   height: 220px;
   border-radius: 50%;
-  object-fit: cover;
+  object-fit: contain;
+  background: var(--surface);
   box-shadow: var(--shadow-lg);
   border: 6px solid var(--background);
+  padding: 36px;
   animation: spinSlow 20s linear infinite;
   animation-play-state: paused;
 }
