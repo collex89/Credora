@@ -4574,7 +4574,7 @@ export default function App() {
                           </button>
                         </div>
                         <p className="welcome-sheet-desc">
-                          Douay-Rheims, KJV, and WEB are complete and work offline. NKJV, RSV, and Good News Translation are still under copyright, so we can only add them through a licensed Bible API — that's next.
+                          Douay-Rheims, KJV, and WEB are complete and work offline. NKJV, RSV, and Good News Translation are still under copyright, so we can only add them through a licensed Bible API. That's next.
                         </p>
                         <div className="version-picker-list">
                           {BIBLE_VERSIONS.map(v => (
