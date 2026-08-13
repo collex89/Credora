@@ -675,7 +675,17 @@ export default function App() {
   const [fullscreenImage, setFullscreenImage] = useState(null); // image URL shown in the tap-to-zoom overlay, or null
   const [scrollToCommentId, setScrollToCommentId] = useState(null); // set alongside activePostId when a notification points at a specific comment
   const [feedRefreshing, setFeedRefreshing] = useState(false);
-  const [feedMode, setFeedMode] = useState('forYou'); // 'forYou' (ranked) | 'following' (chronological, followed authors only)
+  // Persisted the same way theme is: reading it back on load means a
+  // reload doesn't silently snap back to "For You" for someone who'd
+  // switched to "Following" -- which would itself look like "the top post
+  // changed on reload" even though the ranking logic was never at fault.
+  const [feedMode, setFeedMode] = useState(() => {
+    try {
+      return localStorage.getItem('crescamus-feed-mode') === 'following' ? 'following' : 'forYou';
+    } catch {
+      return 'forYou';
+    }
+  }); // 'forYou' (ranked) | 'following' (chronological, followed authors only)
   const [pullDistance, setPullDistance] = useState(0); // live drag offset while pulling down to refresh, 0 when idle
   const pullStartYRef = useRef(null);
   const mainScrollRef = useRef(null);
@@ -755,6 +765,15 @@ export default function App() {
       // not worth surfacing an error for.
     }
   }, [theme]);
+
+  // 2a-2. Remember the Home feed tab (For You / Following) the same way.
+  useEffect(() => {
+    try {
+      localStorage.setItem('crescamus-feed-mode', feedMode);
+    } catch {
+      // Same as theme above -- not worth surfacing an error for.
+    }
+  }, [feedMode]);
 
   // 2z. Close the post "..." menu when clicking anywhere else
   useEffect(() => {
@@ -2498,11 +2517,17 @@ export default function App() {
   // surface older-but-popular posts above a just-posted one nobody's seen
   // yet, with a boost for accounts you already follow so it doesn't turn
   // into pure popularity contest.
+  // A stable tiebreaker matters on every sort below: two posts can share
+  // the same createdAt (or, in "For You", score so close it's effectively
+  // tied), and without a deterministic fallback the top post can appear to
+  // swap on a reload where nothing actually changed, just because the sort
+  // landed differently this time.
+  const byIdDesc = (a, b) => String(b.id).localeCompare(String(a.id));
   const homeFeedPosts = (() => {
     if (feedMode === 'following') {
       return visiblePosts
         .filter(p => p.user.username === myUsername || users.find(u => u.username === p.user.username)?.isFollowing)
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt) || byIdDesc(a, b));
     }
     const now = Date.now();
     const scoreOf = (p) => {
@@ -2514,7 +2539,7 @@ export default function App() {
       // forever.
       return ((engagement + 1) * (isFollowed ? 1.5 : 1)) / Math.pow(hoursOld + 2, 1.6);
     };
-    return [...visiblePosts].sort((a, b) => scoreOf(b) - scoreOf(a));
+    return [...visiblePosts].sort((a, b) => scoreOf(b) - scoreOf(a) || new Date(b.createdAt) - new Date(a.createdAt) || byIdDesc(a, b));
   })();
 
   // 7. Universal Search Logic

@@ -239,13 +239,19 @@ const POST_SELECT = `
 `;
 
 export async function fetchFeed(myId) {
+  // A second sort key matters here: two posts (or reshares) can land on the
+  // exact same created_at, especially seed/demo data inserted in a batch,
+  // and Postgres doesn't promise a stable order for ties across repeated
+  // queries without one -- without it, reloading with no actual new
+  // activity could still shuffle which post looks "first".
   const [{ data: rows, error }, { data: bookmarks }, { data: reshareRows, error: rErr }] = await Promise.all([
-    supabase.from('posts').select(POST_SELECT).order('created_at', { ascending: false }).limit(50),
+    supabase.from('posts').select(POST_SELECT).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(50),
     supabase.from('bookmarks').select('post_id'),
     supabase
       .from('reshares')
       .select(`id, created_at, quote_text, resharer:profiles!reshares_user_id_fkey (username, full_name), post:posts (${POST_SELECT})`)
       .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
       .limit(50)
   ]);
   if (error) return null;
@@ -265,8 +271,12 @@ export async function fetchFeed(myId) {
     }));
 
   // Reshares sort by when they were reshared, not when the original post
-  // was written — the same convention as every other social feed.
-  return [...posts, ...reshares].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  // was written — the same convention as every other social feed. Falls
+  // back to comparing id when createdAt ties exactly, for the same
+  // stable-tiebreak reason as the queries above.
+  return [...posts, ...reshares].sort((a, b) =>
+    new Date(b.createdAt) - new Date(a.createdAt) || String(b.id).localeCompare(String(a.id))
+  );
 }
 
 export async function reshare(postId, userId, quoteText = null) {
