@@ -838,19 +838,28 @@ p {
     align-items: center;
     justify-content: center;
     gap: 64px;
-    padding: 40px;
+    padding: 24px;
   }
   .auth-shell.stage-form {
     align-items: center;
     justify-content: center;
-    padding: 40px;
+    padding: 24px;
   }
   .auth-shell.stage-form .welcome-action-slot {
     flex: none;
   }
   .auth-shell.stage-form .auth-container {
     height: auto;
-    max-height: 85vh;
+    /* Was 85vh with 40px of shell padding on top of that -- on a lot of
+       real desktop window heights (browser chrome eats more than you'd
+       think) the register form's content is taller than that budget, so
+       it opened already scrolled with the bottom padding scrolled out of
+       view -- reading as "no space at the bottom" rather than "this
+       scrolls". More headroom here, plus less padding taken by the shell
+       above and the card itself below, so the common case (and the
+       shorter login form especially) fits without needing to scroll at
+       all. */
+    max-height: 94vh;
     overflow-y: auto;
   }
 
@@ -895,7 +904,7 @@ p {
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
-    padding: 40px;
+    padding: 32px;
   }
 }
 
