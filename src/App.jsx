@@ -602,7 +602,19 @@ export default function App() {
   const [chapterGridBook, setChapterGridBook] = useState(null); // book awaiting a chapter pick
   const [chapterVerses, setChapterVerses] = useState([]);
   const [versesLoading, setVersesLoading] = useState(true);
-  const [bibleVersion, setBibleVersion] = useState('dr'); // see BIBLE_VERSIONS
+  // Was plain useState('dr') with nothing ever saving it, so picking KJV
+  // or WEB reset back to Douay-Rheims on the next visit -- same class of
+  // bug as theme/feedMode. Reads the saved choice back, falling back to
+  // 'dr' if nothing's saved yet or the saved id isn't a real, available
+  // version (e.g. stale data from before a version was added/removed).
+  const [bibleVersion, setBibleVersion] = useState(() => {
+    try {
+      const saved = localStorage.getItem('crescamus-bible-version');
+      return BIBLE_VERSIONS.some(v => v.id === saved && v.available) ? saved : 'dr';
+    } catch {
+      return 'dr';
+    }
+  }); // see BIBLE_VERSIONS
   const [versionPickerOpen, setVersionPickerOpen] = useState(false);
 
   // Prayers Dashboard States — streak/calendar are computed from real
@@ -774,6 +786,15 @@ export default function App() {
       // Same as theme above -- not worth surfacing an error for.
     }
   }, [feedMode]);
+
+  // 2a-3. ...and the chosen Bible version.
+  useEffect(() => {
+    try {
+      localStorage.setItem('crescamus-bible-version', bibleVersion);
+    } catch {
+      // Same as theme above -- not worth surfacing an error for.
+    }
+  }, [bibleVersion]);
 
   // 2z. Close the post "..." menu when clicking anywhere else
   useEffect(() => {
