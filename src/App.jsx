@@ -535,6 +535,8 @@ export default function App() {
   const [shareMenuOpen, setShareMenuOpen] = useState(null); // post id whose Share destination menu is open
   const [copiedShareId, setCopiedShareId] = useState(null); // post id that just had its link copied (brief "Copied!" feedback)
   const [savingImagePostId, setSavingImagePostId] = useState(null); // post id currently being rendered to a downloadable image
+  const [verseShareMenuOpen, setVerseShareMenuOpen] = useState(false); // Share destination menu on the Daily Verse story
+  const [copiedVerseShareLink, setCopiedVerseShareLink] = useState(false); // brief "Copied!" feedback after copying the verse link
   const [quoteReshareTarget, setQuoteReshareTarget] = useState(null); // post being quote-reshared, or null
   const [quoteReshareText, setQuoteReshareText] = useState('');
 
@@ -1263,6 +1265,37 @@ export default function App() {
       setSavingImagePostId(null);
       setShareMenuOpen(null);
     }
+  };
+
+  // Same "share to several platforms" menu as posts (X/WhatsApp/Facebook/
+  // native/copy link/save as image), applied to the Daily Verse -- someone
+  // asked for exactly this. There's no per-verse deep link the way saints
+  // have #saint=id (which verse is "today's" depends on the reader's own
+  // clock, not something a shared link could pin), so, like post sharing,
+  // this just points at the app itself.
+  const getVerseShareText = () => `"${dailyVerse.text}" (${dailyVerse.ref}) via Crescamus`;
+  const shareVerseToX = () => {
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(getVerseShareText())}&url=${encodeURIComponent(getShareUrl())}`, '_blank', 'noopener,noreferrer');
+    setVerseShareMenuOpen(false);
+  };
+  const shareVerseToWhatsApp = () => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${getVerseShareText()} ${getShareUrl()}`)}`, '_blank', 'noopener,noreferrer');
+    setVerseShareMenuOpen(false);
+  };
+  const shareVerseToFacebook = () => {
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getShareUrl())}`, '_blank', 'noopener,noreferrer');
+    setVerseShareMenuOpen(false);
+  };
+  const shareVerseNative = async () => {
+    try { await navigator.share({ title: 'Crescamus', text: getVerseShareText(), url: getShareUrl() }); } catch {}
+    setVerseShareMenuOpen(false);
+  };
+  const copyVerseShareLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${getVerseShareText()} ${getShareUrl()}`);
+      setCopiedVerseShareLink(true);
+      setTimeout(() => setCopiedVerseShareLink(false), 1500);
+    } catch {}
   };
 
   // Unlike posts, a saint has a real (if lightweight) deep link -- see the
@@ -4397,7 +4430,7 @@ export default function App() {
               <div className="saint-details-view" style={{ background: 'var(--primary)', color: '#fff', justifyContent: 'space-between', padding: '32px 24px', zIndex: 3000 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h3 style={{ color: 'var(--secondary)', letterSpacing: '1px' }}>{storyOpen.title}</h3>
-                  <button className="icon-btn" onClick={() => setStoryOpen(null)} style={{ color: '#fff' }}>
+                  <button className="icon-btn" onClick={() => { setStoryOpen(null); setVerseShareMenuOpen(false); }} style={{ color: '#fff' }}>
                     <Icons.Close />
                   </button>
                 </div>
@@ -4412,13 +4445,39 @@ export default function App() {
                       <h4 style={{ color: 'var(--secondary)' }}>{dailyVerse.ref}</h4>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '28px' }}>
-                        <button
-                          className="auth-btn"
-                          style={{ background: 'var(--secondary)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', margin: 0 }}
-                          onClick={() => downloadVerseImage({ text: dailyVerse.text, reference: dailyVerse.ref })}
-                        >
-                          <Icons.Download /> Save as Image
-                        </button>
+                        <div className="post-menu-wrap">
+                          <button
+                            className="auth-btn"
+                            style={{ background: 'var(--secondary)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', margin: 0, width: '100%' }}
+                            onClick={() => setVerseShareMenuOpen(!verseShareMenuOpen)}
+                          >
+                            <Icons.Share /> Share
+                          </button>
+                          {verseShareMenuOpen && (
+                            <div className="post-menu-dropdown" style={{ left: 0, right: 0, width: '100%' }}>
+                              {typeof navigator !== 'undefined' && navigator.share && (
+                                <button className="post-menu-item" onClick={shareVerseNative}>
+                                  <Icons.Share /> More options...
+                                </button>
+                              )}
+                              <button className="post-menu-item" onClick={shareVerseToX}>
+                                <Icons.XLogo /> X
+                              </button>
+                              <button className="post-menu-item" onClick={shareVerseToWhatsApp}>
+                                <Icons.WhatsApp /> WhatsApp
+                              </button>
+                              <button className="post-menu-item" onClick={shareVerseToFacebook}>
+                                <Icons.Facebook /> Facebook
+                              </button>
+                              <button className="post-menu-item" onClick={copyVerseShareLink}>
+                                <Icons.LinkIcon /> {copiedVerseShareLink ? 'Copied!' : 'Copy Link'}
+                              </button>
+                              <button className="post-menu-item" onClick={() => { downloadVerseImage({ text: dailyVerse.text, reference: dailyVerse.ref }); setVerseShareMenuOpen(false); }}>
+                                <Icons.Download /> Save as Image
+                              </button>
+                            </div>
+                          )}
+                        </div>
                         <button
                           className="auth-btn"
                           style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', margin: 0 }}
@@ -4430,6 +4489,7 @@ export default function App() {
                               setVerseModeActive(true);
                               setActiveTab('bible');
                               setStoryOpen(null);
+                              setVerseShareMenuOpen(false);
                             }
                           }}
                         >
