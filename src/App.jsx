@@ -489,6 +489,8 @@ export default function App() {
   const [username, setUsername] = useState('');
   const [regUsername, setRegUsername] = useState(''); // unique @handle claimed at registration
   const [parish, setParish] = useState('');
+  const [regAvatarFile, setRegAvatarFile] = useState(null); // optional profile photo picked at registration
+  const [regAvatarPreview, setRegAvatarPreview] = useState(null); // data URL for the picker's live preview
 
   // Community & Following States
   const [users, setUsers] = useState([]);
@@ -2021,6 +2023,8 @@ export default function App() {
     setPassword('');
     setShowPassword(false);
     setRegUsername('');
+    setRegAvatarFile(null);
+    setRegAvatarPreview(null);
     setAgreedToTerms(false);
     setAuthError('');
     setAuthNotice('');
@@ -2333,6 +2337,20 @@ export default function App() {
     setProfileEditOpen(true);
   };
 
+  // Same file -> data URL preview as handleAvatarFileChange below, just
+  // writing to the registration form's own state instead of editDraft --
+  // there's no signed-in user yet to attach an avatarFile-shaped upload to.
+  const handleRegAvatarFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRegAvatarFile(file);
+      setRegAvatarPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleAvatarFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -2467,6 +2485,7 @@ export default function App() {
         if (!username) return;
         if (getUsernameError(regUsername)) return; // error is shown inline under the field
         setMyUsername(normalizeUsername(regUsername));
+        if (regAvatarPreview) setMyAvatar(regAvatarPreview);
       } else {
         setMyUsername(prev => prev || generateUniqueUsername(email.split('@')[0]));
       }
@@ -2494,11 +2513,20 @@ export default function App() {
           return;
         }
         if (!newSession) {
-          // Email confirmation is enabled on the project
+          // Email confirmation is enabled on the project -- there's no
+          // authenticated session yet to attach an avatar upload to, so a
+          // photo picked here can't be saved until after they confirm and
+          // sign in; they can still add one from Edit Profile at that point.
           setAuthNotice('Almost there — check your email to confirm your account, then sign in.');
           setAuthMode('login');
+        } else if (regAvatarFile) {
+          // Otherwise the session effect (2c) loads the profile and logs us
+          // in -- do the avatar upload+save first so that fetch already
+          // sees the real avatar_url instead of momentarily showing the
+          // fallback and then flickering to the real photo a beat later.
+          const { url } = await api.uploadAvatar(newSession.user.id, regAvatarFile);
+          if (url) await api.updateProfile(newSession.user.id, { avatar_url: url });
         }
-        // Otherwise the session effect (2c) loads the profile and logs us in.
       } else {
         const { error } = await api.signInWithEmail({ email, password });
         if (error) setAuthError(error.message);
@@ -2961,6 +2989,13 @@ export default function App() {
             <form className="auth-form" onSubmit={handleAuthSubmit}>
               {authMode === 'register' && (
                 <>
+                  <div className="avatar-upload-wrap" style={{ margin: '0 auto 20px' }}>
+                    <img src={regAvatarPreview || api.fallbackAvatar(username)} className="profile-avatar-large" alt="Your profile photo" />
+                    <label className="avatar-upload-btn">
+                      <Icons.Camera />
+                      <input type="file" accept="image/*" onChange={handleRegAvatarFileChange} style={{ display: 'none' }} />
+                    </label>
+                  </div>
                   <div className="form-group">
                     <label>Full Name</label>
                     <input
