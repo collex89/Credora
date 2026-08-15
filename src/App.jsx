@@ -3259,6 +3259,9 @@ export default function App() {
                         } else if (notif.type === 'follow' && notif.actorUsername) {
                           openPersonProfile(notif.actorUsername);
                         }
+                        // Announcements have no post/profile to open --
+                        // reading it and marking it read (above) is the
+                        // whole interaction.
                       }}>
                         <div className={`notification-icon-indicator ${notif.type}`}>
                           {notif.type === 'like' && <Icons.Heart />}
@@ -3267,10 +3270,19 @@ export default function App() {
                           {notif.type === 'prayer' && <Icons.Rosary />}
                           {notif.type === 'saint' && <Icons.Sparkles />}
                           {notif.type === 'follow' && <Icons.Users />}
+                          {notif.type === 'announcement' && <Icons.Cross />}
                         </div>
                         <div className="notification-content">
                           <p className="notification-message">
-                            <strong>{notif.user}</strong> {notif.text}
+                            {notif.type === 'announcement' ? (
+                              <>
+                                <strong>Crescamus</strong>
+                                <br />
+                                {notif.text}
+                              </>
+                            ) : (
+                              <><strong>{notif.user}</strong> {notif.text}</>
+                            )}
                           </p>
                           <p className="notification-time">{notif.time}</p>
                         </div>

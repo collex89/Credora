@@ -422,14 +422,17 @@ const NOTIF_TEXT = {
   like: (post) => `liked your post${post ? `: "${truncate(post)}"` : ''}`,
   comment: (post) => `commented on your post${post ? `: "${truncate(post)}"` : ''}`,
   follow: () => 'started following you',
-  mention: (post) => `mentioned you${post ? `: "${truncate(post)}"` : ''}`
+  mention: (post) => `mentioned you${post ? `: "${truncate(post)}"` : ''}`,
+  // Announcements have no fixed template -- the actual copy is stored per
+  // row in `message` (see migration 023), not derived from an actor/post.
+  announcement: (_post, message) => message || ''
 };
 
 export async function fetchNotifications(userId) {
   const { data, error } = await supabase
     .from('notifications')
     .select(`
-      id, type, read, created_at, post_id, comment_id,
+      id, type, read, created_at, post_id, comment_id, message,
       actor:profiles!notifications_actor_id_fkey (username, full_name, avatar_url),
       post:posts (text)
     `)
@@ -441,11 +444,11 @@ export async function fetchNotifications(userId) {
   return data.map(n => ({
     id: n.id,
     type: n.type,
-    user: displayName(n.actor),
+    user: n.type === 'announcement' ? 'Crescamus' : displayName(n.actor),
     actorUsername: n.actor?.username || null,
     postId: n.post_id || null,
     commentId: n.comment_id || null,
-    text: NOTIF_TEXT[n.type](n.post?.text),
+    text: NOTIF_TEXT[n.type](n.post?.text, n.message),
     time: timeAgo(n.created_at),
     unread: !n.read
   }));
