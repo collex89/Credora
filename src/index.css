@@ -65,7 +65,15 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  /* Has to match .device-container's height unit below. On Chrome for
+     Android, 100vh is the *large* viewport (as if the address bar were
+     hidden) while the shell inside is 100svh (address bar showing), so
+     mixing the two left the body an address-bar taller than its only
+     child -- and align-items: center split that leftover evenly, showing
+     as a white band above the app. Browsers whose vh already equals svh
+     never showed it, which is why this looked Chrome-only. */
+  min-height: 100vh; /* fallback for browsers without svh support */
+  min-height: 100svh;
   overflow: hidden;
 }
 
