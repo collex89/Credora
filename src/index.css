@@ -423,6 +423,13 @@ p {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  /* Its parent (.welcome-action-slot) is a column flexbox with
+     align-items: center, so without an explicit width this shrinks to fit
+     its widest child's natural text width rather than the screen -- which
+     centred a ~295px box in a 375px phone and read as a huge extra gutter
+     on top of the 24px padding. The desktop card below already sets this
+     for the same reason. */
+  width: 100%;
   height: 100%;
   animation: slideUp 0.5s ease-out;
 }
