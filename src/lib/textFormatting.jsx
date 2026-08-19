@@ -36,25 +36,47 @@ function splitMentions(text, keyPrefix, onMentionClick) {
   return out;
 }
 
-function parseInline(text, keyPrefix, onMentionClick) {
+// Three alternatives, ordered longest-marker-first so ***both*** is taken as
+// bold+italic rather than as **bold** plus a stray asterisk -- which is what
+// the composer's two toolbar buttons produce when both are applied to the
+// same selection, and why they appeared not to work together at all.
+//
+// The italic branch can't just be \*(.+?)\*: lazily, that closes on the
+// first asterisk of a following **bold**, splitting one italic run into
+// three. So its body accepts either a non-asterisk or a doubled asterisk,
+// and its closing marker must not itself be the start of a doubled one.
+// (The two body alternatives are mutually exclusive on the next character,
+// so there's no ambiguity for the engine to backtrack over.)
+const INLINE_RE = /\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*((?:[^*]|\*\*)+?)\*(?!\*)/g;
+
+// Recurses into whatever each marker wrapped, so nesting works in both
+// directions and so @mentions inside bold/italic still become links -- the
+// leaf strings are the only place splitMentions runs. Each recursive call
+// gets a strictly shorter string (at least two markers are stripped), so
+// this always terminates.
+function parseInline(text, keyPrefix, onMentionClick, depth = 0) {
   const parts = [];
-  const regex = /\*\*(.+?)\*\*|\*(.+?)\*/g;
+  const regex = new RegExp(INLINE_RE.source, 'g');
   let lastIndex = 0;
   let match;
   let i = 0;
   while ((match = regex.exec(text)) !== null) {
     if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+    const key = `${keyPrefix}-d${depth}-${i++}`;
+    const inner = (body) => parseInline(body, key, onMentionClick, depth + 1);
     if (match[1] !== undefined) {
-      parts.push(<strong key={`${keyPrefix}-b-${i++}`}>{match[1]}</strong>);
+      parts.push(<strong key={key}><em>{inner(match[1])}</em></strong>);
+    } else if (match[2] !== undefined) {
+      parts.push(<strong key={key}>{inner(match[2])}</strong>);
     } else {
-      parts.push(<em key={`${keyPrefix}-i-${i++}`}>{match[2]}</em>);
+      parts.push(<em key={key}>{inner(match[3])}</em>);
     }
     lastIndex = regex.lastIndex;
   }
   if (lastIndex < text.length) parts.push(text.slice(lastIndex));
 
   return parts.flatMap((part, idx) =>
-    typeof part === 'string' ? splitMentions(part, `${keyPrefix}-${idx}`, onMentionClick) : part
+    typeof part === 'string' ? splitMentions(part, `${keyPrefix}-d${depth}-${idx}`, onMentionClick) : part
   );
 }
 
