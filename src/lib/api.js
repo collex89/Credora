@@ -2,6 +2,21 @@
 // exact shapes the UI already renders, so App.jsx stays presentation-only.
 import { supabase } from './supabase';
 
+// Cache-Control max-age (seconds) stamped onto uploads that live at a URL
+// whose bytes can never change: post media gets a unique timestamped path
+// per upload, and avatars sit at a fixed path but are only ever handed out
+// with a ?t= cache-buster that changes whenever one is replaced. Supabase
+// defaults to 3600, which made every viewer re-download the same unchanged
+// image once an hour -- pure repeat egress for no benefit, and the largest
+// avoidable chunk of the Storage bill.
+//
+// Deliberately not used for message images: those are private, served via
+// signed URLs that are re-minted (with a fresh token, so a fresh URL) on
+// every fetchMessages call, so a longer max-age can't be hit anyway -- and
+// a year-long cache header on private DM content is the wrong default to
+// hand to any intermediary.
+const IMMUTABLE_MEDIA_CACHE_SECONDS = '31536000'; // one year
+
 const timeAgo = (iso) => {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (seconds < 60) return 'Just now';
@@ -74,7 +89,7 @@ export async function uploadAvatar(userId, file) {
   const path = `${userId}/avatar.${ext}`;
   const { error } = await supabase.storage.from('avatars').upload(path, file, {
     upsert: true,
-    cacheControl: '3600'
+    cacheControl: IMMUTABLE_MEDIA_CACHE_SECONDS
   });
   if (error) return { url: null, error };
   const { data } = supabase.storage.from('avatars').getPublicUrl(path);
@@ -367,7 +382,7 @@ export async function setMute(mutedId, userId, muted) {
 export async function uploadPostMedia(userId, file) {
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
   const path = `${userId}/${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from('post-images').upload(path, file, { cacheControl: '3600' });
+  const { error } = await supabase.storage.from('post-images').upload(path, file, { cacheControl: IMMUTABLE_MEDIA_CACHE_SECONDS });
   if (error) return { url: null, error };
   const { data } = supabase.storage.from('post-images').getPublicUrl(path);
   return { url: data.publicUrl, error: null };
@@ -545,6 +560,8 @@ export async function sendMessage(senderId, recipientId, text, imagePath = null)
 export async function uploadMessageImage(userId, file) {
   const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
   const path = `${userId}/${Date.now()}.${ext}`;
+  // Left at the default hour on purpose -- see IMMUTABLE_MEDIA_CACHE_SECONDS
+  // at the top of this file for why a longer cache doesn't apply here.
   const { error } = await supabase.storage.from('message-images').upload(path, file, { cacheControl: '3600' });
   if (error) return { path: null, error };
   return { path, error: null };
