@@ -4150,3 +4150,25 @@ textarea.form-input {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* ----------------------------------------------------
+   Scroll containment for anything layered over the feed
+   ---------------------------------------------------- */
+/* By default a scroll container hands its leftover scroll to its ancestors
+   once it reaches an end. So scrolling up inside the open composer, after
+   it had nothing left to scroll, carried on into the feed sitting behind
+   it -- the feed visibly moved under a full-screen overlay. `contain`
+   blocks that hand-off while keeping each element's own bounce.
+
+   Scoped to overlay scroll areas rather than put on .scrollable itself:
+   the feed uses that same class, and containing it there would also stop
+   the browser's pull-to-refresh, which is a separate behaviour nobody
+   asked to change. Placed at the end of the file, after every rule it
+   touches, per the ordering convention used elsewhere here. */
+.saint-details-view .scrollable,
+.saint-details-body,
+.chat-messages-list,
+.composer-emoji-picker,
+.mention-suggestions {
+  overscroll-behavior: contain;
+}
