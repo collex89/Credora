@@ -729,13 +729,29 @@ export default function App() {
   // keyboard instead of sitting right above it. Tracking the real visual
   // viewport height here and applying it as this custom property lets
   // those overlays shrink to fit above the keyboard instead.
+  // Height alone isn't enough: Chrome for Android doesn't resize the layout
+  // viewport for the keyboard, it *pans* the visual viewport down over it.
+  // An overlay anchored with inset:0 stays put in layout coordinates, so on
+  // screen it slides up by however far the viewport panned -- clipping its
+  // own header off the top and lifting its bottom edge off the keyboard,
+  // leaving a strip of whatever sits behind it showing through. offsetTop is
+  // that pan distance, applied below as the overlay's top. Panning fires
+  // 'scroll' rather than 'resize', so both are needed.
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const update = () => document.documentElement.style.setProperty('--visual-vh', `${vv.height}px`);
+    const update = () => {
+      const root = document.documentElement.style;
+      root.setProperty('--visual-vh', `${vv.height}px`);
+      root.setProperty('--visual-top', `${vv.offsetTop}px`);
+    };
     update();
     vv.addEventListener('resize', update);
-    return () => vv.removeEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
   }, []);
 
   // 1. Splash fadeout effect -- a 2s minimum so the branding always shows,

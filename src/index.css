@@ -2775,8 +2775,14 @@ textarea.form-input {
   inset: 0;
   /* Shrinks to fit above an open mobile keyboard instead of running full
      height underneath it -- see the visualViewport effect in App.jsx.
-     Falls back to the normal inset:0 sizing everywhere else. */
+     Falls back to the normal inset:0 sizing everywhere else. --visual-top
+     re-anchors it to the visual viewport: without it, height alone is right
+     but the overlay still sits at the layout viewport's top, so once Chrome
+     for Android pans for the keyboard it rides up out of view and exposes
+     the screen behind it along the bottom. Must stay after inset, which
+     sets top itself. (top + height means bottom is ignored, as intended.) */
   height: var(--visual-vh, 100%);
+  top: var(--visual-top, 0px);
   background: var(--surface);
   z-index: 1800;
   display: flex;
@@ -3375,6 +3381,14 @@ textarea.form-input {
   z-index: 2200;
 }
 
+/* .scrollable is flex:1 but a plain block inside, so a flex:1 child of it
+   would have nothing to grow against. Scoped to the composer rather than
+   changed on .scrollable itself, which a dozen other views share. */
+.composer-sheet .scrollable {
+  display: flex;
+  flex-direction: column;
+}
+
 .composer-post-btn {
   padding: 8px 20px;
   border-radius: 20px;
@@ -3397,6 +3411,13 @@ textarea.form-input {
   display: flex;
   gap: 12px;
   padding: 18px 16px 8px;
+  /* Claim the sheet's remaining height so the textarea has something to
+     stretch into. Without this the row is only as tall as its content, and
+     the textarea sat at whatever its rows attribute worked out to no matter
+     how much space was free. min-height:0 lets it shrink again when the
+     keyboard takes most of the screen. */
+  flex: 1;
+  min-height: 0;
 }
 
 .composer-writer-avatar {
@@ -3418,6 +3439,10 @@ textarea.form-input {
   font-size: 16px;
   line-height: 1.5;
   padding-top: 8px;
+  /* The row's default align-items:stretch already sizes this to the full
+     height of .composer-writer above; min-height:0 stops the rows attribute
+     acting as a floor that would keep it from shrinking on a short screen. */
+  min-height: 0;
 }
 
 .composer-textarea::placeholder {
