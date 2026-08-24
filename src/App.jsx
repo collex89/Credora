@@ -1834,6 +1834,20 @@ export default function App() {
     refreshFeed();
   };
 
+  // Every tab renders inside one shared .scrollable (see ACTIVE VIEW
+  // CONTENT below), so the container is never unmounted on a tab change and
+  // keeps its scrollTop -- leaving a scrolled-down feed and tapping Profile
+  // dropped you partway down Profile. Handled here rather than in the nav
+  // buttons because there are two navbars plus several deep links into tabs
+  // (stories, search, the audio and Bible shortcuts), and every one of them
+  // needs it. Instant, not smooth: the new tab should already be at the top
+  // when it appears, not visibly scroll there afterwards. Deliberately keyed
+  // on activeTab alone -- closing a subView overlay should return the feed
+  // where it was, not jump it to the top.
+  useEffect(() => {
+    mainScrollRef.current?.scrollTo({ top: 0 });
+  }, [activeTab]);
+
   const openComposer = () => {
     setNewPostText('');
     setComposerMedia(null);
