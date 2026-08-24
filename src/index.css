@@ -1667,11 +1667,15 @@ p {
 
 .version-picker-btn svg { width: 14px; height: 14px; }
 
+/* Both of these sit above .app-navbar (z-index 900). At the old 10/11 the
+   navbar painted straight over the bottom of the sheet, hiding the last
+   version in the list, and stayed undimmed while everything else behind
+   the scrim darkened. */
 .version-picker-scrim {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
-  z-index: 10;
+  z-index: 1000;
 }
 
 .version-picker-sheet {
@@ -1679,18 +1683,29 @@ p {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 11;
+  z-index: 1001;
   background: var(--surface);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   padding: 20px 24px calc(24px + env(safe-area-inset-bottom, 0px));
   box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.15);
   animation: sheetSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Without a ceiling the sheet just grows with its content, so a long
+     enough list runs off the top of the screen. Capped short of full
+     height so a strip of scrim stays tappable to dismiss. */
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100% - 32px);
 }
 
 .version-picker-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* The list, not the sheet, is what scrolls -- keeps the title and close
+     button pinned while the versions move under them. */
+  overflow-y: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
 }
 
 .version-picker-item {
@@ -1705,6 +1720,9 @@ p {
   cursor: pointer;
   transition: var(--transition);
   text-align: left;
+  /* Flex items shrink by default; in the scrolling column above that would
+     squash the rows instead of letting the list scroll. */
+  flex-shrink: 0;
 }
 
 .version-picker-item.active {
