@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Delete Your Account — Crescamus</title>
+<meta name="description" content="How to permanently delete your Crescamus account and data, with or without the app installed." />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #1E3A8A;
+    --secondary: #D4AF37;
+    --background: #FAFAF8;
+    --surface: #FFFFFF;
+    --text: #1B2330;
+    --text-secondary: #6B7280;
+    --border: #E5E7EB;
+    --danger: #B3261E;
+    --font-display: 'Outfit', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary: #3B82F6;
+      --secondary: #E9C46A;
+      --background: #0B0F19;
+      --surface: #131A26;
+      --text: #F3F4F6;
+      --text-secondary: #9CA3AF;
+      --border: #1F2937;
+      --danger: #F2837A;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--text);
+    font-family: var(--font-body);
+    line-height: 1.65;
+  }
+  .wrap { max-width: 40rem; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+  header.site {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 1.75rem; margin-bottom: 2.25rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .wordmark {
+    font-family: var(--font-display); font-weight: 700; font-size: 1.15rem;
+    color: var(--primary); text-decoration: none; letter-spacing: -0.01em;
+  }
+  nav.legal a {
+    color: var(--text-secondary); text-decoration: none; font-size: 0.85rem;
+    margin-left: 1.25rem;
+  }
+  nav.legal a:hover, nav.legal a.current { color: var(--primary); }
+  h1 {
+    font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(1.75rem, 5vw, 2.25rem); letter-spacing: -0.01em;
+    margin: 0 0 0.4rem;
+  }
+  .lede { color: var(--text-secondary); font-size: 1rem; margin: 0 0 2.5rem; max-width: 32rem; }
+  h2 {
+    font-family: var(--font-display); font-weight: 600; font-size: 1.15rem;
+    color: var(--primary); margin: 2.25rem 0 0.9rem;
+  }
+  p { margin: 0 0 1rem; }
+  a.inline { color: var(--primary); }
+  .path {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.25rem 1.4rem; margin-bottom: 1.1rem;
+  }
+  .path h3 {
+    font-family: var(--font-display); font-weight: 600; font-size: 1rem;
+    margin: 0 0 0.5rem; display: flex; align-items: center; gap: 0.55rem;
+  }
+  .path h3 .badge {
+    font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--secondary); border: 1px solid var(--secondary);
+    border-radius: 4px; padding: 0.12em 0.5em; font-weight: 700;
+  }
+  .path ol { margin: 0.5rem 0 0; padding-left: 1.25rem; }
+  .path li { margin-bottom: 0.35rem; }
+  .btn {
+    display: inline-block; margin-top: 0.75rem;
+    background: var(--primary); color: #fff; text-decoration: none;
+    font-weight: 600; font-size: 0.9rem; padding: 0.6rem 1.1rem;
+    border-radius: 8px;
+  }
+  .data-list { list-style: none; padding: 0; margin: 0 0 1rem; }
+  .data-list li {
+    padding: 0.55rem 0; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; gap: 1rem; font-size: 0.95rem;
+  }
+  .data-list li:last-child { border-bottom: none; }
+  .data-list .what { color: var(--text-secondary); font-size: 0.88rem; text-align: right; }
+  .note {
+    font-size: 0.88rem; color: var(--text-secondary);
+    border-left: 2px solid var(--danger); padding-left: 0.9rem; margin: 1.5rem 0;
+  }
+  footer.site {
+    margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border);
+    color: var(--text-secondary); font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="site">
+      <a class="wordmark" href="https://www.crescamus.app">Crescamus</a>
+      <nav class="legal">
+        <a href="/privacy.html">Privacy</a>
+        <a href="/terms.html">Terms</a>
+        <a href="/delete-account.html" class="current">Delete Account</a>
+      </nav>
+    </header>
+
+    <h1>Delete Your Account</h1>
+    <p class="lede">You can permanently delete your Crescamus account and everything tied to it, whether or not you still have the app installed.</p>
+
+    <h2>If you have the app</h2>
+    <div class="path">
+      <h3><span class="badge">Instant</span>Delete from inside the app</h3>
+      <ol>
+        <li>Open Crescamus and sign in</li>
+        <li>Go to <strong>Profile → Settings → Delete Account</strong></li>
+        <li>Type <strong>DELETE</strong> to confirm</li>
+      </ol>
+      <p style="margin-top:0.75rem">Your account and data are removed immediately. This cannot be undone.</p>
+    </div>
+
+    <h2>If you no longer have the app</h2>
+    <div class="path">
+      <h3><span class="badge">By request</span>Email us to request deletion</h3>
+      <p>Send an email to <strong>crescamus.app@gmail.com</strong> from the email address on your account, with the subject line "Delete my account." Include your username if you remember it.</p>
+      <a class="btn" href="mailto:crescamus.app@gmail.com?subject=Delete%20my%20account&body=Please%20delete%20my%20Crescamus%20account.%0A%0AAccount%20email%3A%0AUsername%20(if%20known)%3A">Email crescamus.app@gmail.com</a>
+      <p style="margin-top:0.9rem">We'll verify the request and complete the deletion within 30 days.</p>
+    </div>
+
+    <h2>What gets deleted</h2>
+    <ul class="data-list">
+      <li><span>Profile</span><span class="what">username, name, parish, bio, photo</span></li>
+      <li><span>Posts, comments &amp; likes</span><span class="what">everything you've posted</span></li>
+      <li><span>Follows &amp; followers</span><span class="what">your connections to other users</span></li>
+      <li><span>Direct messages</span><span class="what">sent and received</span></li>
+      <li><span>Prayer intentions</span><span class="what">including completion history</span></li>
+      <li><span>Account credentials</span><span class="what">email and encrypted password</span></li>
+    </ul>
+
+    <p class="note">Deletion is permanent and cannot be reversed. Once processed, this data cannot be recovered by you or by us.</p>
+
+    <footer class="site">
+      <p>See our <a class="inline" href="/privacy.html">Privacy Policy</a> for how this data was used while your account was active. Questions: <a class="inline" href="mailto:crescamus.app@gmail.com">crescamus.app@gmail.com</a></p>
+    </footer>
+  </div>
+</body>
+</html>

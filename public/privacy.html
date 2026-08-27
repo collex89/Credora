@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Privacy Policy — Crescamus</title>
+<meta name="description" content="How Crescamus collects, uses, and protects your information." />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #1E3A8A;
+    --secondary: #D4AF37;
+    --background: #FAFAF8;
+    --surface: #FFFFFF;
+    --text: #1B2330;
+    --text-secondary: #6B7280;
+    --border: #E5E7EB;
+    --font-display: 'Outfit', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary: #3B82F6;
+      --secondary: #E9C46A;
+      --background: #0B0F19;
+      --surface: #131A26;
+      --text: #F3F4F6;
+      --text-secondary: #9CA3AF;
+      --border: #1F2937;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--text);
+    font-family: var(--font-body);
+    line-height: 1.65;
+  }
+  .wrap { max-width: 40rem; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+  header.site {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 1.75rem; margin-bottom: 2.25rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .wordmark {
+    font-family: var(--font-display); font-weight: 700; font-size: 1.15rem;
+    color: var(--primary); text-decoration: none; letter-spacing: -0.01em;
+  }
+  nav.legal a {
+    color: var(--text-secondary); text-decoration: none; font-size: 0.85rem;
+    margin-left: 1.25rem;
+  }
+  nav.legal a:hover, nav.legal a.current { color: var(--primary); }
+  h1 {
+    font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(1.75rem, 5vw, 2.25rem); letter-spacing: -0.01em;
+    margin: 0 0 0.4rem;
+  }
+  .updated { color: var(--text-secondary); font-size: 0.9rem; margin: 0 0 2.5rem; }
+  h2 {
+    font-family: var(--font-display); font-weight: 600; font-size: 1.15rem;
+    color: var(--primary); margin: 2.25rem 0 0.75rem;
+  }
+  h2 .num { color: var(--secondary); margin-right: 0.5em; }
+  p { margin: 0 0 1rem; }
+  a.inline { color: var(--primary); }
+  footer.site {
+    margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border);
+    color: var(--text-secondary); font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="site">
+      <a class="wordmark" href="https://www.crescamus.app">Crescamus</a>
+      <nav class="legal">
+        <a href="/privacy.html" class="current">Privacy</a>
+        <a href="/terms.html">Terms</a>
+        <a href="/delete-account.html">Delete Account</a>
+      </nav>
+    </header>
+
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: July 2026</p>
+
+    <p>Crescamus ("we", "us", "the App") is a Catholic social platform. This policy explains what information we collect, how we use it, and the choices you have.</p>
+
+    <h2><span class="num">1.</span>Information we collect</h2>
+    <p><strong>Account information:</strong> email address, username, full name, password (encrypted, so we never see it in plain text), and anything optional you add to your profile (parish, bio, profile photo).</p>
+    <p><strong>Content you create:</strong> posts, comments, likes, follows, direct messages, prayer intentions, and prayer completion history.</p>
+    <p><strong>Usage information:</strong> basic technical data needed to run the app (device/browser type, timestamps of activity) via our backend provider.</p>
+
+    <h2><span class="num">2.</span>How we use your information</h2>
+    <p>To provide the app's core features: your feed, prayer tracking, messaging, and community features. To keep the platform safe (reviewing reports, enforcing blocks). To communicate with you about your account when necessary. We do not sell your personal information to third parties, and we do not use your data for targeted advertising.</p>
+
+    <h2><span class="num">3.</span>Where your data lives</h2>
+    <p>Your account and content are stored with Supabase, our backend provider, which encrypts data in transit and at rest. Bible text, Saint biographies, and audio content shown in the app are sourced from public-domain and Creative Commons-licensed sources (Project Gutenberg, Wikipedia/Wikimedia Commons, LibriVox, Internet Archive). Using these features doesn't share your personal data with those sources.</p>
+
+    <h2><span class="num">4.</span>Direct messages</h2>
+    <p>Messages you send are private between you and the recipient in the sense that other users cannot see them. They are not end-to-end encrypted: they are stored securely in our database the same way your posts are, which means they are technically accessible to database administrators for security, legal, or support purposes. Please don't share highly sensitive information over direct message.</p>
+
+    <h2><span class="num">5.</span>Prayer intentions</h2>
+    <p>Your personal prayer intentions are private to your account by default. Other users cannot see them.</p>
+
+    <h2><span class="num">6.</span>Your rights</h2>
+    <p>You can edit or remove your profile information, delete individual posts, and unfollow, block, or report other users at any time within the app. You can permanently delete your account and all associated data from Profile → Settings → Delete Account, or by <a class="inline" href="/delete-account.html">requesting deletion here</a> if you no longer have the app installed. This is irreversible.</p>
+
+    <h2><span class="num">7.</span>Children's privacy</h2>
+    <p>Crescamus is not directed at children under 13, and we do not knowingly collect information from children under 13. If you believe a child has created an account, contact us and we will remove it.</p>
+
+    <h2><span class="num">8.</span>Changes to this policy</h2>
+    <p>If we make material changes to this policy, we'll update the "Last updated" date above and, for significant changes, notify you in the app.</p>
+
+    <h2><span class="num">9.</span>Contact</h2>
+    <p>Questions about this policy or your data can be sent to <a class="inline" href="mailto:crescamus.app@gmail.com">crescamus.app@gmail.com</a>.</p>
+
+    <footer class="site">
+      <p>Crescamus · <a class="inline" href="https://www.crescamus.app">www.crescamus.app</a></p>
+    </footer>
+  </div>
+</body>
+</html>
