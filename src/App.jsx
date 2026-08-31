@@ -889,6 +889,14 @@ export default function App() {
     return () => { cancelled = true; };
   }, [selectedBook, selectedChapter, bibleVersion]);
 
+  // The Bible reader shares the app's main scroll container, so changing a
+  // chapter otherwise leaves the new text at the previous chapter's scroll
+  // position. Start every opened chapter at verse 1 instead.
+  useEffect(() => {
+    if (activeTab !== 'bible' || !verseModeActive) return;
+    mainScrollRef.current?.scrollTo({ top: 0 });
+  }, [activeTab, selectedBook, selectedChapter, verseModeActive]);
+
   // 2b. Track the Supabase auth session (live mode only)
   useEffect(() => {
     if (!isSupabaseConfigured) return;
