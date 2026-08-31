@@ -294,6 +294,19 @@ export async function fetchFeed(myId) {
   );
 }
 
+// A shared-post link may point to something older than the first 50 feed
+// entries. Fetch it directly so the link remains useful regardless of when
+// the post was written or how active the feed has been since.
+export async function fetchPost(postId, myId) {
+  const [{ data: row, error }, { data: bookmarks }] = await Promise.all([
+    supabase.from('posts').select(POST_SELECT).eq('id', postId).maybeSingle(),
+    supabase.from('bookmarks').select('post_id').eq('post_id', postId)
+  ]);
+  if (error || !row) return null;
+
+  return mapPost(row, myId, new Set((bookmarks || []).map(bookmark => bookmark.post_id)));
+}
+
 export async function reshare(postId, userId, quoteText = null) {
   return supabase.from('reshares').insert({ post_id: postId, user_id: userId, quote_text: quoteText });
 }

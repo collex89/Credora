@@ -16,6 +16,11 @@ import { downloadPostImage } from './lib/postImage';
 const MAX_COMPOSER_VIDEO_BYTES = 50 * 1024 * 1024; // 50MB — generous for a short clip, cheap to fail fast on client rather than mid-upload
 const POST_MAX_LENGTH = 2000; // matches the posts.text check constraint (schema.sql) — shown live so a long post is never silently rejected at submit time
 
+const getPostIdFromHash = () => {
+  const match = window.location.hash.match(/^#post=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+  return match ? match[1] : null;
+};
+
 const COMPOSER_EMOJIS = [
   '🙏', '❤️', '✝️', '🕊️', '😊', '😇', '🙌', '✨', '🌟', '⭐',
   '😢', '🥹', '😭', '🤗', '💪', '🙇', '😅', '😂', '🥳', '😍',
@@ -688,6 +693,8 @@ export default function App() {
   const [replyingTo, setReplyingTo] = useState(null); // commentId whose reply box is open, or null
   const [replyInputs, setReplyInputs] = useState({}); // commentId -> draft reply text
   const [activePostId, setActivePostId] = useState(null); // postId whose detail view is open
+  const [sharedPostId, setSharedPostId] = useState(getPostIdFromHash);
+  const sharedPostRequestRef = useRef(null);
   const [fullscreenImage, setFullscreenImage] = useState(null); // image URL shown in the tap-to-zoom overlay, or null
   const [scrollToCommentId, setScrollToCommentId] = useState(null); // set alongside activePostId when a notification points at a specific comment
   const [feedRefreshing, setFeedRefreshing] = useState(false);
@@ -785,6 +792,49 @@ export default function App() {
     setActiveSaint(saint);
     setSubView('saints');
   }, []);
+
+  // Post links use a hash so the hosting service only needs to serve the SPA
+  // at the root URL. Keep the target in state as well, so browser back/forward
+  // navigation to another shared post opens the appropriate detail view.
+  useEffect(() => {
+    const syncSharedPost = () => {
+      const postId = getPostIdFromHash();
+      sharedPostRequestRef.current = null;
+      setSharedPostId(postId);
+      if (!postId) setActivePostId(null);
+    };
+    window.addEventListener('hashchange', syncSharedPost);
+    return () => window.removeEventListener('hashchange', syncSharedPost);
+  }, []);
+
+  // Once a recipient is signed in, open the shared post. Most posts will
+  // already be in the feed; fetching by id also covers older posts that fall
+  // outside the feed's initial 50-item window.
+  useEffect(() => {
+    if (!sharedPostId || !isLoggedIn || !session?.user?.id) return;
+
+    // The original feed entry has the post id itself. A reshare has a
+    // different display id, so it must not take over a link to the original
+    // post (and its optional quote/resharer context).
+    const postInFeed = posts.find(post => post.id === sharedPostId);
+    if (postInFeed) {
+      setActivePostId(postInFeed.id);
+      return;
+    }
+    if (!isSupabaseConfigured || sharedPostRequestRef.current === sharedPostId) return;
+
+    let cancelled = false;
+    sharedPostRequestRef.current = sharedPostId;
+    api.fetchPost(sharedPostId, session.user.id).then(post => {
+      if (cancelled || !post) return;
+      setPosts(currentPosts => currentPosts.some(current => current.originalPostId === post.originalPostId)
+        ? currentPosts
+        : [post, ...currentPosts]
+      );
+      setActivePostId(post.id);
+    });
+    return () => { cancelled = true; };
+  }, [isLoggedIn, posts, session, sharedPostId]);
 
   // 2. Synchronize theme styling variables, and remember the choice so it's
   // still there next time instead of quietly reverting to light.
@@ -1244,33 +1294,35 @@ export default function App() {
     setQuoteReshareText('');
   };
 
-  // There's no per-post route in this app yet, so the shared link is just
-  // the app itself -- the excerpt in the share text carries the content.
+  // Hash-based post links let the app be served from its normal root URL while
+  // still opening one exact post. Use originalPostId so a reshare always links
+  // to the post itself, rather than the transient reshare feed entry.
   const getShareUrl = () => window.location.origin;
+  const getPostShareUrl = (post) => `${window.location.origin}/#post=${post.originalPostId}`;
   const getShareText = (post) => {
     const excerpt = post.text.length > 100 ? `${post.text.slice(0, 100)}…` : post.text;
     return `"${excerpt}" — via Crescamus`;
   };
 
   const shareToX = (post) => {
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(getShareText(post))}&url=${encodeURIComponent(getShareUrl())}`, '_blank', 'noopener,noreferrer');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(getShareText(post))}&url=${encodeURIComponent(getPostShareUrl(post))}`, '_blank', 'noopener,noreferrer');
     setShareMenuOpen(null);
   };
   const shareToWhatsApp = (post) => {
-    window.open(`https://wa.me/?text=${encodeURIComponent(`${getShareText(post)} ${getShareUrl()}`)}`, '_blank', 'noopener,noreferrer');
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${getShareText(post)} ${getPostShareUrl(post)}`)}`, '_blank', 'noopener,noreferrer');
     setShareMenuOpen(null);
   };
-  const shareToFacebook = (_post) => {
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getShareUrl())}`, '_blank', 'noopener,noreferrer');
+  const shareToFacebook = (post) => {
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getPostShareUrl(post))}`, '_blank', 'noopener,noreferrer');
     setShareMenuOpen(null);
   };
   const shareViaNative = async (post) => {
-    try { await navigator.share({ title: 'Crescamus', text: getShareText(post), url: getShareUrl() }); } catch {}
+    try { await navigator.share({ title: 'Crescamus', text: getShareText(post), url: getPostShareUrl(post) }); } catch {}
     setShareMenuOpen(null);
   };
   const copyShareLink = async (post) => {
     try {
-      await navigator.clipboard.writeText(getShareUrl());
+      await navigator.clipboard.writeText(getPostShareUrl(post));
       setCopiedShareId(post.id);
       setTimeout(() => setCopiedShareId(null), 1500);
     } catch {}
