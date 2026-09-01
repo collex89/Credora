@@ -414,6 +414,32 @@ export async function setLike(postId, userId, liked) {
   return supabase.from('likes').delete().match({ post_id: postId, user_id: userId });
 }
 
+// The likes table is publicly readable, so a post can show exactly who has
+// liked it without exposing account email addresses or other private auth
+// data. Shape the result the same way as the existing people-list screens.
+export async function fetchPostLikers(postId, myId) {
+  const [{ data, error }, { data: myFollows }] = await Promise.all([
+    supabase
+      .from('likes')
+      .select('created_at, user:profiles!likes_user_id_fkey (id, username, full_name, parish, avatar_url, is_verified)')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: false }),
+    supabase.from('follows').select('followee_id').eq('follower_id', myId)
+  ]);
+  if (error) return [];
+
+  const myFollowingIds = new Set((myFollows || []).map(f => f.followee_id));
+  return (data || []).filter(row => row.user).map(row => ({
+    id: row.user.id,
+    name: displayName(row.user),
+    username: row.user.username,
+    avatar: avatarOf(row.user),
+    parish: row.user.parish || '',
+    isVerified: !!row.user.is_verified,
+    isFollowing: myFollowingIds.has(row.user.id)
+  }));
+}
+
 export async function setBookmark(postId, userId, bookmarked) {
   if (bookmarked) {
     return supabase.from('bookmarks').insert({ post_id: postId, user_id: userId });

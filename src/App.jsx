@@ -693,6 +693,9 @@ export default function App() {
   const [replyingTo, setReplyingTo] = useState(null); // commentId whose reply box is open, or null
   const [replyInputs, setReplyInputs] = useState({}); // commentId -> draft reply text
   const [activePostId, setActivePostId] = useState(null); // postId whose detail view is open
+  const [postLikersOpen, setPostLikersOpen] = useState(null); // original post id whose likes list is open
+  const [postLikers, setPostLikers] = useState([]);
+  const [postLikersLoading, setPostLikersLoading] = useState(false);
   const [sharedPostId, setSharedPostId] = useState(getPostIdFromHash);
   const sharedPostRequestRef = useRef(null);
   const [fullscreenImage, setFullscreenImage] = useState(null); // image URL shown in the tap-to-zoom overlay, or null
@@ -1256,6 +1259,41 @@ export default function App() {
     }
   };
 
+  const openPostLikers = async (post) => {
+    if (!post.likes) return;
+    setPostLikersOpen(post.originalPostId);
+    setPostLikers([]);
+
+    if (isSupabaseConfigured && session) {
+      setPostLikersLoading(true);
+      try {
+        setPostLikers(await api.fetchPostLikers(post.originalPostId, session.user.id));
+      } finally {
+        setPostLikersLoading(false);
+      }
+    }
+  };
+
+  const renderPostLikeControl = (post) => (
+    <div className="post-like-control">
+      <button
+        className={`feed-action-btn ${post.isLiked ? 'liked' : ''}`}
+        onClick={() => handleLikePost(post.originalPostId)}
+        aria-label={post.isLiked ? 'Unlike this post' : 'Like this post'}
+      >
+        <Icons.Heart fill={post.isLiked} />
+      </button>
+      <button
+        className="post-likes-count"
+        onClick={() => openPostLikers(post)}
+        disabled={!post.likes}
+        aria-label={post.likes ? `View ${post.likes} ${post.likes === 1 ? 'person' : 'people'} who liked this post` : 'No likes yet'}
+      >
+        {post.likes}
+      </button>
+    </div>
+  );
+
   const handleBookmarkPost = (postId) => {
     const target = posts.find(p => p.originalPostId === postId);
     setPosts(prev => prev.map(post => {
@@ -1738,10 +1776,7 @@ export default function App() {
       {post.image && <img src={post.image} className="feed-image" alt="post content" onClick={() => setActivePostId(post.id)} style={{ cursor: 'pointer' }} />}
 
       <div className="feed-actions">
-        <button className={`feed-action-btn ${post.isLiked ? 'liked' : ''}`} onClick={() => handleLikePost(post.originalPostId)}>
-          <Icons.Heart fill={post.isLiked} />
-          <span>{post.likes}</span>
-        </button>
+        {renderPostLikeControl(post)}
 
         <button className="feed-action-btn" onClick={() => setActiveCommentPost(activeCommentPost === post.id ? null : post.id)}>
           <Icons.Comment />
@@ -4237,10 +4272,7 @@ export default function App() {
                       )}
 
                       <div className="feed-actions">
-                        <button className={`feed-action-btn ${detailPost.isLiked ? 'liked' : ''}`} onClick={() => handleLikePost(detailPost.originalPostId)}>
-                          <Icons.Heart fill={detailPost.isLiked} />
-                          <span>{detailPost.likes}</span>
-                        </button>
+                        {renderPostLikeControl(detailPost)}
                         <button className="feed-action-btn">
                           <Icons.Comment />
                           <span>{detailPost.commentsCount}</span>
@@ -4368,6 +4400,62 @@ export default function App() {
                           <div
                             style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, cursor: 'pointer' }}
                             onClick={() => { setFollowListOpen(null); openPersonProfile(person.username); }}
+                          >
+                            <img src={person.avatar} className="feed-user-avatar" alt={person.name} />
+                            <div>
+                              <div className="feed-user-name">
+                                {person.name} {person.isVerified && <Icons.Verified />}
+                              </div>
+                              <div className="feed-username">@{person.username}</div>
+                            </div>
+                          </div>
+                          {person.id !== (session?.user?.id || null) && (
+                            <button
+                              className={`follow-chip ${isFollowingNow ? 'following' : ''}`}
+                              onClick={() => toggleFollowUser(person.id)}
+                            >
+                              {isFollowingNow ? 'Following' : 'Follow'}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ------------------ VIEW: POST LIKERS ------------------ */}
+            {postLikersOpen && (
+              <div className="saint-details-view post-likers-view">
+                <div className="person-view-header">
+                  <button className="icon-btn" onClick={() => setPostLikersOpen(null)}>
+                    <Icons.ChevronLeft />
+                  </button>
+                  <h3>Likes</h3>
+                  <div style={{ width: '24px' }}></div>
+                </div>
+                <div className="scrollable">
+                  {postLikersLoading ? (
+                    <p style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>Loading...</p>
+                  ) : postLikers.length === 0 ? (
+                    <div className="search-empty-state">
+                      <span className="empty-state-icon"><Icons.Heart /></span>
+                      <p>
+                        {isSupabaseConfigured
+                          ? 'No likes yet.'
+                          : 'Full likes lists need a live account — this is demo mode.'}
+                      </p>
+                    </div>
+                  ) : (
+                    postLikers.map(person => {
+                      const live = users.find(u => u.id === person.id);
+                      const isFollowingNow = live ? live.isFollowing : person.isFollowing;
+                      return (
+                        <div key={person.id} className="card follow-list-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px' }}>
+                          <div
+                            style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, cursor: 'pointer' }}
+                            onClick={() => { setPostLikersOpen(null); openPersonProfile(person.username); }}
                           >
                             <img src={person.avatar} className="feed-user-avatar" alt={person.name} />
                             <div>

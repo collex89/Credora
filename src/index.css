@@ -1375,6 +1375,40 @@ p {
   color: var(--secondary);
 }
 
+.post-like-control {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.post-like-control .feed-action-btn {
+  gap: 0;
+}
+
+.post-likes-count {
+  min-width: 20px;
+  padding: 4px 2px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.post-likes-count:hover,
+.post-likes-count:focus-visible {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.post-likes-count:disabled {
+  cursor: default;
+  text-decoration: none;
+}
+
 /* Comments Section in Feed */
 .comments-drawer {
   margin-top: 12px;
@@ -1519,12 +1553,6 @@ p {
   box-shadow: none;
   border: none;
   margin-bottom: 0;
-}
-
-/* A profile is an overlay itself. The post detail opened from it must sit
-   above that profile, otherwise the detail view is present but invisible. */
-.post-detail-view {
-  z-index: 1900;
 }
 
 .post-detail-text {
@@ -2812,6 +2840,26 @@ textarea.form-input {
   display: flex;
   flex-direction: column;
   animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Both placed after the base rule above, not where they were first written
+   near .post-detail-view's other styles -- .post-likers-view and
+   .post-detail-view are the same specificity as .saint-details-view, so an
+   earlier position let the base rule's z-index:1800 silently win the
+   cascade and shadow both overrides. Neither view actually sat where its
+   own rule said; they only looked right because of DOM order, which is not
+   something to depend on. See the auth-shell desktop comment further up
+   for the same convention already established in this file. */
+
+/* A profile is an overlay itself. The post detail opened from it must sit
+   above that profile, otherwise the detail view is present but invisible. */
+.post-detail-view {
+  z-index: 1900;
+}
+
+/* Above .post-detail-view too, since likes can be opened from inside it. */
+.post-likers-view {
+  z-index: 1950;
 }
 
 .saint-details-image-hero {
