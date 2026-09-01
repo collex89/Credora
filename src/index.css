@@ -1521,6 +1521,12 @@ p {
   margin-bottom: 0;
 }
 
+/* A profile is an overlay itself. The post detail opened from it must sit
+   above that profile, otherwise the detail view is present but invisible. */
+.post-detail-view {
+  z-index: 1900;
+}
+
 .post-detail-text {
   font-size: 16px;
   line-height: 1.5;

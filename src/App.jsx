@@ -4189,7 +4189,7 @@ export default function App() {
               const detailPost = activePostId ? posts.find(p => p.id === activePostId) : null;
               if (!detailPost) return null;
               return (
-                <div className="saint-details-view">
+                <div className="saint-details-view post-detail-view">
                   <div className="person-view-header">
                     <button className="icon-btn" onClick={() => setActivePostId(null)}>
                       <Icons.ChevronLeft />
