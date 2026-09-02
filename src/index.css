@@ -58,6 +58,89 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Custom Text Selection Highlight */
+::selection {
+  background: rgba(30, 58, 138, 0.22);
+  color: inherit;
+}
+[data-theme="dark"] ::selection {
+  background: rgba(59, 130, 246, 0.35);
+  color: inherit;
+}
+
+/* UI Non-Selectable Shell: Prevents app chrome, headers, action counts, 
+   empty notices, and buttons from being captured when selecting or copying post content */
+button,
+.btn,
+.icon-btn,
+.feed-action-btn,
+.tab-btn,
+.nav-item,
+.post-menu-item,
+.post-like-control,
+.post-likes-count,
+.comment-reply-btn,
+.comment-like-btn,
+.comment-submit-btn,
+.feed-header,
+.feed-user-info,
+.feed-user-name,
+.feed-username,
+.feed-time,
+.feed-user-parish,
+.reshare-banner,
+.feed-actions,
+.person-view-header,
+.app-header,
+.bottom-nav,
+.settings-section-title,
+.search-empty-state,
+.comment-input-box,
+.post-detail-comments,
+.post-detail-comments > .settings-section-title,
+.post-detail-comments > p,
+.comment-user,
+.badge,
+.tag-badge {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Whitelist actual readable content text for selection & copying */
+.feed-text,
+.post-detail-text,
+.quote-reshare-text,
+.comment-text,
+.composer-textarea,
+.saint-bio,
+.person-profile-bio,
+.reading-text,
+.reading-verse,
+.prayer-content,
+.novena-content,
+.selectable-text,
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Prevent image ghost dragging during text selection */
+img,
+video,
+.feed-image,
+.feed-user-avatar {
+  -webkit-user-drag: none;
+  user-drag: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 body {
   background-color: #11141B; /* Dark cinema backdrop for virtual device on desktop */
   font-family: var(--font-body);
@@ -1321,11 +1404,16 @@ p {
   color: var(--text-secondary);
 }
 
-.feed-text {
+.feed-text,
+.post-detail-text {
   font-size: 13.5px;
   line-height: 1.5;
   color: var(--text);
   margin-bottom: 12px;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+  word-break: break-word;
 }
 
 .feed-image {

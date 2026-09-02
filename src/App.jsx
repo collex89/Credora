@@ -469,6 +469,12 @@ const Icons = {
       <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
       <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
     </svg>
+  ),
+  Copy: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+    </svg>
   )
 };
 
@@ -541,6 +547,7 @@ export default function App() {
   const [reshareMenuOpen, setReshareMenuOpen] = useState(null); // post id whose Repost/Quote choice is open
   const [shareMenuOpen, setShareMenuOpen] = useState(null); // post id whose Share destination menu is open
   const [copiedShareId, setCopiedShareId] = useState(null); // post id that just had its link copied (brief "Copied!" feedback)
+  const [copiedTextId, setCopiedTextId] = useState(null); // post id that just had its text copied (brief "Text Copied!" feedback)
   const [savingImagePostId, setSavingImagePostId] = useState(null); // post id currently being rendered to a downloadable image
   const [verseShareMenuOpen, setVerseShareMenuOpen] = useState(false); // Share destination menu on the Daily Verse story
   const [copiedVerseShareLink, setCopiedVerseShareLink] = useState(false); // brief "Copied!" feedback after copying the verse link
@@ -884,6 +891,96 @@ export default function App() {
     document.addEventListener('click', closeMenu);
     return () => document.removeEventListener('click', closeMenu);
   }, [postMenuOpen]);
+
+  // Restrict text selection / "Select All" on mobile & desktop to the target post or comment content,
+  // preventing user metadata, action counters, comments headers, or composer inputs from being selected.
+  useEffect(() => {
+    let activeContainer = null;
+    let isClamping = false;
+
+    const findSelectableContainer = (node) => {
+      if (!node) return null;
+      const elem = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+      return elem?.closest(
+        '.feed-text, .post-detail-text, .quote-reshare-text, .comment-text, .selectable-text'
+      ) || null;
+    };
+
+    const handlePointerDown = (e) => {
+      if (e.target.closest('input, textarea, [contenteditable="true"]')) {
+        activeContainer = null;
+        return;
+      }
+      activeContainer = findSelectableContainer(e.target);
+    };
+
+    const handleSelectStart = (e) => {
+      if (e.target.closest('input, textarea, [contenteditable="true"]')) {
+        activeContainer = null;
+        return;
+      }
+      activeContainer = findSelectableContainer(e.target);
+    };
+
+    const handleSelectionChange = () => {
+      if (isClamping || !activeContainer) return;
+
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+
+      const range = sel.getRangeAt(0);
+      const isStartIn = activeContainer.contains(range.startContainer);
+      const isEndIn = activeContainer.contains(range.endContainer);
+
+      // If selection spans outside the active post/comment container (e.g. from mobile "Select all")
+      if (!isStartIn || !isEndIn) {
+        isClamping = true;
+        try {
+          const newRange = document.createRange();
+          newRange.selectNodeContents(activeContainer);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        } catch (err) {
+          // ignore
+        }
+        setTimeout(() => {
+          isClamping = false;
+        }, 60);
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
+          return;
+        }
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) {
+          const container = findSelectableContainer(sel.anchorNode);
+          if (container) {
+            e.preventDefault();
+            const range = document.createRange();
+            range.selectNodeContents(container);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('selectstart', handleSelectStart);
+    document.addEventListener('selectionchange', handleSelectionChange);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('selectstart', handleSelectStart);
+      document.removeEventListener('selectionchange', handleSelectionChange);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // 2a. Load real scripture text for the selected book/chapter (lazy per book)
   useEffect(() => {
@@ -1379,6 +1476,30 @@ export default function App() {
       setTimeout(() => setCopiedShareId(null), 1500);
     } catch {}
   };
+  const copyPostText = async (post) => {
+    const textToCopy = post.text || '';
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = textToCopy;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        textarea.style.top = '-9999px';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopiedTextId(post.id);
+      setTimeout(() => setCopiedTextId(null), 1500);
+    } catch (err) {
+      console.error('Failed to copy text', err);
+    }
+  };
   const shareAsImage = async (post) => {
     setSavingImagePostId(post.id);
     try {
@@ -1727,6 +1848,9 @@ export default function App() {
             </button>
             {postMenuOpen === post.id && (
               <div className="post-menu-dropdown">
+                <button className="post-menu-item" onClick={() => { copyPostText(post); setPostMenuOpen(null); }}>
+                  <Icons.Copy /> {copiedTextId === post.id ? 'Copied Text!' : 'Copy Text'}
+                </button>
                 {post.resharedBy?.username === myUsername ? (
                   <button className="post-menu-item danger" onClick={() => handleUndoReshare(post)}>
                     <Icons.Trash /> Remove Repost
@@ -1777,7 +1901,17 @@ export default function App() {
         </div>
       </div>
 
-      <div className="feed-text" onClick={() => setActivePostId(post.id)} style={{ cursor: 'pointer' }}>{renderFormattedText(post.text, openPersonProfile)}</div>
+      <div
+        className="feed-text"
+        onClick={() => {
+          const sel = window.getSelection();
+          if (sel && sel.toString().trim().length > 0) return;
+          setActivePostId(post.id);
+        }}
+        style={{ cursor: 'pointer' }}
+      >
+        {renderFormattedText(post.text, openPersonProfile)}
+      </div>
       {post.video && <video src={post.video} className="feed-image" controls playsInline />}
       {post.image && <img src={post.image} className="feed-image" alt="post content" onClick={() => setActivePostId(post.id)} style={{ cursor: 'pointer' }} />}
 
@@ -1824,6 +1958,9 @@ export default function App() {
           </button>
           {shareMenuOpen === post.id && (
             <div className="post-menu-dropdown">
+              <button className="post-menu-item" onClick={() => copyPostText(post)}>
+                <Icons.Copy /> {copiedTextId === post.id ? 'Text Copied!' : 'Copy Text'}
+              </button>
               {typeof navigator !== 'undefined' && navigator.share && (
                 <button className="post-menu-item" onClick={() => shareViaNative(post)}>
                   <Icons.Share /> More options...
@@ -4262,7 +4399,60 @@ export default function App() {
                             {detailPost.user.parish && <div className="feed-user-parish"><Icons.Church /> {detailPost.user.parish}</div>}
                           </div>
                         </div>
-                        <span className="feed-time">{detailPost.time}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="feed-time">{detailPost.time}</span>
+                          <div className="post-menu-wrap">
+                            <button
+                              className="icon-btn"
+                              onClick={() => setPostMenuOpen(postMenuOpen === detailPost.id ? null : detailPost.id)}
+                            >
+                              <Icons.MoreVertical />
+                            </button>
+                            {postMenuOpen === detailPost.id && (
+                              <div className="post-menu-dropdown">
+                                <button className="post-menu-item" onClick={() => { copyPostText(detailPost); setPostMenuOpen(null); }}>
+                                  <Icons.Copy /> {copiedTextId === detailPost.id ? 'Copied Text!' : 'Copy Text'}
+                                </button>
+                                {detailPost.resharedBy?.username === myUsername ? (
+                                  <button className="post-menu-item danger" onClick={() => { handleUndoReshare(detailPost); setPostMenuOpen(null); }}>
+                                    <Icons.Trash /> Remove Repost
+                                  </button>
+                                ) : detailPost.user.username === myUsername ? (
+                                  <>
+                                    <button className="post-menu-item" onClick={() => { openEditPost(detailPost); setPostMenuOpen(null); }}>
+                                      <Icons.Edit /> Edit Post
+                                    </button>
+                                    <button className="post-menu-item danger" onClick={() => { handleDeletePost(detailPost.originalPostId); setActivePostId(null); setPostMenuOpen(null); }}>
+                                      <Icons.Trash /> Delete Post
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    {(() => {
+                                      const author = users.find(u => u.username === detailPost.user.username);
+                                      const muted = author && mutedUserIds.has(author.id);
+                                      return (
+                                        <button className="post-menu-item" onClick={() => { author && toggleMuteUser(author.id); setPostMenuOpen(null); }}>
+                                          <Icons.VolumeOff /> {muted ? 'Unmute' : 'Mute'} @{detailPost.user.username}
+                                        </button>
+                                      );
+                                    })()}
+                                    <button
+                                      className="post-menu-item"
+                                      onClick={() => {
+                                        const author = users.find(u => u.username === detailPost.user.username);
+                                        setPostMenuOpen(null);
+                                        openReport({ postId: detailPost.originalPostId, userId: author?.id, label: `${detailPost.user.name}'s post` });
+                                      }}
+                                    >
+                                      <Icons.Flag /> Report Post
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
                       <div className="feed-text post-detail-text">{renderFormattedText(detailPost.text, openPersonProfile)}</div>
@@ -4316,6 +4506,9 @@ export default function App() {
                           </button>
                           {shareMenuOpen === detailPost.id && (
                             <div className="post-menu-dropdown">
+                              <button className="post-menu-item" onClick={() => copyPostText(detailPost)}>
+                                <Icons.Copy /> {copiedTextId === detailPost.id ? 'Text Copied!' : 'Copy Text'}
+                              </button>
                               {typeof navigator !== 'undefined' && navigator.share && (
                                 <button className="post-menu-item" onClick={() => shareViaNative(detailPost)}>
                                   <Icons.Share /> More options...
