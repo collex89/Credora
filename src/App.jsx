@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BIBLE_BOOKS, SAINTS, SAINT_CATEGORIES, AUDIO_TRACKS, STORIES } from './data/mockData';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import * as api from './lib/api';
-import { loadBibleChapter, BIBLE_VERSIONS } from './lib/bible';
+import { loadBibleChapter, versionHasBook, BIBLE_VERSIONS } from './lib/bible';
 import { getDailyVerse } from './data/dailyVerses';
 import { PRIVACY_POLICY, TERMS_OF_SERVICE } from './data/legalContent';
 import { MISSION, ABOUT_FEATURES, CONTENT_SOURCING_NOTE } from './data/aboutContent';
@@ -614,14 +614,20 @@ export default function App() {
   // Was plain useState('dr') with nothing ever saving it, so picking KJV
   // or WEB reset back to Douay-Rheims on the next visit -- same class of
   // bug as theme/feedMode. Reads the saved choice back, falling back to
-  // 'dr' if nothing's saved yet or the saved id isn't a real, available
-  // version (e.g. stale data from before a version was added/removed).
+  // the app's default (see below) if nothing's saved yet or the saved id
+  // isn't a real, available version (e.g. stale data from before a version
+  // was added/removed).
   const [bibleVersion, setBibleVersion] = useState(() => {
+    // Default is WEB, not DR: modern English, and -- since the Catholic
+    // Edition swap above -- the full 73-book canon in its own text rather
+    // than falling back anywhere. Only applies to someone who has never
+    // picked a version themselves; an existing saved choice is always
+    // honored as-is, DR included.
     try {
       const saved = localStorage.getItem('crescamus-bible-version');
-      return BIBLE_VERSIONS.some(v => v.id === saved && v.available) ? saved : 'dr';
+      return BIBLE_VERSIONS.some(v => v.id === saved && v.available) ? saved : 'web';
     } catch {
-      return 'dr';
+      return 'web';
     }
   }); // see BIBLE_VERSIONS
   const [versionPickerOpen, setVersionPickerOpen] = useState(false);
@@ -4965,7 +4971,7 @@ export default function App() {
                         </button>
                       </div>
 
-                      {bibleVersion !== 'dr' && selectedBook.category === 'Deuterocanonical' && (
+                      {bibleVersion !== 'dr' && !versionHasBook(selectedBook.id, bibleVersion) && (
                         <p className="version-fallback-note">
                           {BIBLE_VERSIONS.find(v => v.id === bibleVersion)?.shortName} doesn't include {selectedBook.name} — showing Douay-Rheims instead.
                         </p>
