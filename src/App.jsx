@@ -919,7 +919,18 @@ export default function App() {
         activeContainer = null;
         return;
       }
-      activeContainer = findSelectableContainer(e.target);
+      // Mobile "Select All" doesn't extend the existing selection -- it
+      // fires its own fresh selectstart, targeted at document.body rather
+      // than wherever the long-press actually started. Unconditionally
+      // reassigning here (the original bug) read that as "a new selection
+      // started somewhere untracked" and nulled activeContainer right
+      // before selectionchange needed it to clamp anything -- so Select
+      // All's own selectstart was silently disarming the fix meant to
+      // catch it. Only ever narrowing to a real container, never widening
+      // to null on a miss, means a stray body-targeted event from Select
+      // All can't erase context set by the touch that actually started it.
+      const found = findSelectableContainer(e.target);
+      if (found) activeContainer = found;
     };
 
     const handleSelectionChange = () => {
