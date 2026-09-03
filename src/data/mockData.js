@@ -463,6 +463,18 @@ export const SAINTS = [
     image: "/saints/bernard.jpg",
     sourceUrl: "https://en.wikipedia.org/wiki/Bernard_of_Clairvaux",
     imageLicense: "Public domain"
+  },
+  {
+    id: "gregory",
+    name: "St. Gregory the Great",
+    category: "Popes",
+    feastDay: "September 3",
+    patronage: "Musicians, Singers, Students, Teachers, Popes",
+    quote: "The proof of love is in the works. Where love exists, it works great things. But when it ceases to act, it ceases to exist.",
+    bio: "Pope Gregory I (c. 540 – 12 March 604), commonly known as Saint Gregory the Great, was the Bishop of Rome and head of the Catholic Church from 3 September 590 until his death in 604. One of the four original Latin Fathers and Doctors of the Church, he is revered for his pastoral wisdom, administrative reforms, humanitarian care for the poor, and liturgical renewal.\nBorn into an aristocratic Roman senatorial family, Gregory served as Prefect of Rome before dedicating his life entirely to God. He converted his family estate on the Caelian Hill into the monastery of St. Andrew, distributed his vast wealth to establish monasteries and assist the impoverished, and took vows as a humble Benedictine monk. Pope Pelagius II subsequently ordained him and dispatched him as papal ambassador (apocrisiarius) to the imperial court in Constantinople.\nIn 590, amid catastrophic flooding, pestilence, and Lombard aggression in Italy, Gregory was unanimously elected pope. He organized vital famine relief, restructured ecclesiastical administration, secured peace with the Lombards, and commissioned the historic Gregorian Mission led by Saint Augustine of Canterbury to bring the Gospel to the Anglo-Saxons in Britain. A prolific theologian, his foundational texts—including the Pastoral Rule (Regula Pastoralis), Moralia in Job, and the Dialogues—shaped Christian spirituality and clerical formation for a millennium. He is traditionally credited with organizing and patronizing the liturgical music that bears his name, Gregorian Chant, and was the first pontiff to adopt the enduring title 'Servus servorum Dei' (Servant of the servants of God).",
+    image: "/saints/gregory.jpg",
+    sourceUrl: "https://en.wikipedia.org/wiki/Pope_Gregory_I",
+    imageLicense: "Public domain"
   }
 ];
 
