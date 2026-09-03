@@ -152,8 +152,8 @@ const Icons = {
       <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
     </svg>
   ),
-  Close: () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  Close: ({ size = 20 } = {}) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
     </svg>
   ),
@@ -587,6 +587,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home'); // 'home' | 'bible' | 'prayers' | 'audio' | 'profile'
   const [subView, setSubView] = useState(null); // null | 'search' | 'saints' | 'saintsBrowse' | 'person'
   const [saintCategoryFilter, setSaintCategoryFilter] = useState('All');
+  const [saintSearchQuery, setSaintSearchQuery] = useState('');
   const [activeSaint, setActiveSaint] = useState(null);
   const [copiedSaintShare, setCopiedSaintShare] = useState(false);
   const [activePerson, setActivePerson] = useState(null); // user id
@@ -3024,7 +3025,18 @@ export default function App() {
   // the story overlay, and the downloadable image. Rotates each calendar day.
   const dailyVerse = getDailyVerse();
 
-  const filteredSaints = saintCategoryFilter === 'All' ? SAINTS : SAINTS.filter(s => s.category === saintCategoryFilter);
+  const filteredSaints = SAINTS.filter(s => {
+    const matchesCategory = saintCategoryFilter === 'All' || s.category === saintCategoryFilter;
+    if (!matchesCategory) return false;
+    if (!saintSearchQuery.trim()) return true;
+    const q = saintSearchQuery.toLowerCase().trim();
+    return (
+      s.name.toLowerCase().includes(q) ||
+      (s.patronage && s.patronage.toLowerCase().includes(q)) ||
+      (s.feastDay && s.feastDay.toLowerCase().includes(q)) ||
+      (q.length >= 3 && s.bio && s.bio.toLowerCase().includes(q))
+    );
+  });
 
   return (
     <div className={`device-container ${isLoggedIn && !passwordRecoveryMode ? 'app-mode' : 'auth-mode'}`} style={{ '--bible-font-size': `${bibleFontSize}px` }}>
@@ -3657,14 +3669,42 @@ export default function App() {
             {subView === 'saintsBrowse' && (
               <div className="saint-details-view">
                 <div className="person-view-header">
-                  <button className="icon-btn" onClick={() => setSubView(null)}>
+                  <button
+                    className="icon-btn"
+                    onClick={() => { setSubView(null); setSaintSearchQuery(''); }}
+                    aria-label="Back"
+                  >
                     <Icons.ChevronLeft />
                   </button>
                   <h3>Saints</h3>
                   <div style={{ width: '24px' }}></div>
                 </div>
 
-                <div className="scrollable">
+                <div className="scrollable" style={{ padding: '0 16px 24px' }}>
+                  {/* Dedicated Saint Search Bar */}
+                  <div className="search-bar-wrapper" style={{ margin: '14px 0 12px', position: 'relative' }}>
+                    <span className="search-icon-inside"><Icons.Search /></span>
+                    <input
+                      type="text"
+                      className="search-input-field"
+                      placeholder="Search saints by name, patronage, feast day..."
+                      value={saintSearchQuery}
+                      onChange={(e) => setSaintSearchQuery(e.target.value)}
+                      aria-label="Search saints"
+                      style={{ paddingRight: saintSearchQuery ? '36px' : '16px' }}
+                    />
+                    {saintSearchQuery && (
+                      <button
+                        type="button"
+                        className="search-clear-btn"
+                        onClick={() => setSaintSearchQuery('')}
+                        aria-label="Clear saint search"
+                      >
+                        <Icons.Close size={12} />
+                      </button>
+                    )}
+                  </div>
+
                   <div className="search-filter-pills">
                     {['All', ...SAINT_CATEGORIES].map(cat => (
                       <span
@@ -3677,17 +3717,58 @@ export default function App() {
                     ))}
                   </div>
 
-                  <div className="books-grid" style={{ marginTop: '16px' }}>
-                    {filteredSaints.map(s => (
-                      <div key={s.id} className="saint-grid-item" onClick={() => { setActiveSaint(s); setSubView('saints'); }}>
-                        <img src={s.image} className="saint-item-image" alt={s.name} loading="lazy" />
-                        <div className="saint-item-info">
-                          <h4>{s.name}</h4>
-                          <p>{s.category} • {s.feastDay}</p>
-                        </div>
+                  {filteredSaints.length === 0 ? (
+                    <div className="search-empty-state" style={{ padding: '40px 16px', textAlign: 'center' }}>
+                      <span className="empty-state-icon" style={{ display: 'inline-flex', marginBottom: '12px' }}>
+                        <Icons.Search />
+                      </span>
+                      <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>No saints found</h3>
+                      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '280px', margin: '0 auto 16px' }}>
+                        {saintCategoryFilter !== 'All'
+                          ? `No ${saintCategoryFilter.toLowerCase()} match "${saintSearchQuery}".`
+                          : `No saints match "${saintSearchQuery}". Try another name, feast day, or patronage.`}
+                      </p>
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                        {saintCategoryFilter !== 'All' && (
+                          <button
+                            type="button"
+                            className="auth-btn"
+                            style={{ width: 'auto', padding: '8px 14px', fontSize: '12px', margin: 0 }}
+                            onClick={() => setSaintCategoryFilter('All')}
+                          >
+                            Search in All
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="auth-btn"
+                          style={{
+                            width: 'auto',
+                            padding: '8px 14px',
+                            fontSize: '12px',
+                            margin: 0,
+                            background: 'var(--border)',
+                            color: 'var(--text)'
+                          }}
+                          onClick={() => { setSaintSearchQuery(''); setSaintCategoryFilter('All'); }}
+                        >
+                          Clear Search
+                        </button>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="books-grid" style={{ marginTop: '16px' }}>
+                      {filteredSaints.map(s => (
+                        <div key={s.id} className="saint-grid-item" onClick={() => { setActiveSaint(s); setSubView('saints'); }}>
+                          <img src={s.image} className="saint-item-image" alt={s.name} loading="lazy" />
+                          <div className="saint-item-info">
+                            <h4>{s.name}</h4>
+                            <p>{s.category} • {s.feastDay}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -5061,6 +5142,7 @@ export default function App() {
                       has no obvious entry point from Home, where most people land. */}
                   <div className="card" style={{ marginBottom: '16px', background: 'linear-gradient(135deg, rgba(212,175,55,0.1), rgba(30,58,138,0.05))', border: '1px solid rgba(var(--secondary-rgb), 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => {
                     setSaintCategoryFilter('All');
+                    setSaintSearchQuery('');
                     setSubView('saintsBrowse');
                   }}>
                     <div>
@@ -5505,6 +5587,7 @@ export default function App() {
                   {/* Saints Quick Discover Banner in Audio */}
                   <div className="card" style={{ marginTop: '24px', background: 'linear-gradient(135deg, rgba(212,175,55,0.1), rgba(30,58,138,0.05))', border: '1px solid rgba(var(--secondary-rgb), 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => {
                     setSaintCategoryFilter('All');
+                    setSaintSearchQuery('');
                     setSubView('saintsBrowse');
                   }}>
                     <div>

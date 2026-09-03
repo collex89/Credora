@@ -3106,6 +3106,30 @@ textarea.form-input {
   box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.05);
 }
 
+.search-clear-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--border);
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  padding: 0;
+}
+
+.search-clear-btn:hover {
+  background: var(--text-secondary);
+  color: var(--surface);
+}
+
 .search-filter-pills {
   display: flex;
   gap: 8px;
