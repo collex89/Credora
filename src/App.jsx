@@ -5192,39 +5192,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {versionPickerOpen && (
-                    <>
-                      <div className="version-picker-scrim" onClick={() => setVersionPickerOpen(false)} />
-                      <div className="version-picker-sheet">
-                        <div className="welcome-sheet-header">
-                          <h3 className="welcome-sheet-title" style={{ marginBottom: 0 }}>Bible Version</h3>
-                          <button className="icon-btn" onClick={() => setVersionPickerOpen(false)} aria-label="Close">
-                            <Icons.Close />
-                          </button>
-                        </div>
-                        <p className="welcome-sheet-desc">
-                          Douay-Rheims, KJV, and WEB are complete and work offline. NKJV, RSV, and Good News Translation are still under copyright, so we can only add them through a licensed Bible API. That's next.
-                        </p>
-                        <div className="version-picker-list">
-                          {BIBLE_VERSIONS.map(v => (
-                            <button
-                              key={v.id}
-                              className={`version-picker-item ${v.id === bibleVersion ? 'active' : ''} ${!v.available ? 'disabled' : ''}`}
-                              disabled={!v.available}
-                              onClick={() => { setBibleVersion(v.id); setVersionPickerOpen(false); }}
-                            >
-                              <span>
-                                <span className="version-picker-item-name">{v.name}</span>
-                                <span className="version-picker-item-short">{v.shortName}</span>
-                              </span>
-                              {v.id === bibleVersion ? <Icons.Check /> : !v.available && <span className="version-picker-soon">Coming soon</span>}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
-
                   {/* Bible Text Settings Drawer */}
                   {bibleSettingsOpen && (
                     <div className="read-settings-drawer">
@@ -5890,6 +5857,40 @@ export default function App() {
                 <span>Profile</span>
               </button>
             </div>
+
+            {/* BIBLE VERSION PICKER SHEET OVERLAY -- rendered at root level so it sits above .app-navbar on mobile */}
+            {versionPickerOpen && (
+              <>
+                <div className="version-picker-scrim" onClick={() => setVersionPickerOpen(false)} />
+                <div className="version-picker-sheet">
+                  <div className="welcome-sheet-header">
+                    <h3 className="welcome-sheet-title" style={{ marginBottom: 0 }}>Bible Version</h3>
+                    <button className="icon-btn" onClick={() => setVersionPickerOpen(false)} aria-label="Close">
+                      <Icons.Close />
+                    </button>
+                  </div>
+                  <p className="welcome-sheet-desc">
+                    Douay-Rheims, KJV, and WEB are complete and work offline. NKJV, RSV, and Good News Translation are still under copyright, so we can only add them through a licensed Bible API. That's next.
+                  </p>
+                  <div className="version-picker-list">
+                    {BIBLE_VERSIONS.map(v => (
+                      <button
+                        key={v.id}
+                        className={`version-picker-item ${v.id === bibleVersion ? 'active' : ''} ${!v.available ? 'disabled' : ''}`}
+                        disabled={!v.available}
+                        onClick={() => { setBibleVersion(v.id); setVersionPickerOpen(false); }}
+                      >
+                        <span>
+                          <span className="version-picker-item-name">{v.name}</span>
+                          <span className="version-picker-item-short">{v.shortName}</span>
+                        </span>
+                        {v.id === bibleVersion ? <Icons.Check /> : !v.available && <span className="version-picker-soon">Coming soon</span>}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </>
         )}
 
