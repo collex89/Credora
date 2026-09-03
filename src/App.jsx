@@ -3488,9 +3488,11 @@ export default function App() {
               <button className={`sidebar-nav-item ${activeTab === 'audio' ? 'active' : ''}`} onClick={() => { setActiveTab('audio'); setSubView(null); }}>
                 <Icons.Audio active={activeTab === 'audio'} /> Audio
               </button>
-              <button className={`sidebar-nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => { setActiveTab('profile'); setSubView(null); }}>
-                <Icons.Profile active={activeTab === 'profile'} /> Profile
-              </button>
+              <div className="sidebar-nav-bottom">
+                <button className={`sidebar-nav-item ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => { setActiveTab('profile'); setSubView(null); }}>
+                  <Icons.Profile active={activeTab === 'profile'} /> Profile
+                </button>
+              </div>
             </nav>
 
             <div className="app-main-column">

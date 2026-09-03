@@ -370,6 +370,12 @@ body {
   flex-shrink: 0;
 }
 
+.sidebar-nav-bottom {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
 /* Scrollbar styling inside App */
 .scrollable {
   flex: 1;
