@@ -993,8 +993,15 @@ export default function App() {
     };
   }, []);
 
-  // 2a. Load real scripture text for the selected book/chapter (lazy per book)
+  // 2a. Load real scripture text for the selected book/chapter (lazy per book).
+  // selectedBook defaults to Matthew so the Bible tab has something sensible
+  // pre-selected the first time it's opened -- but with no activeTab guard,
+  // that default made this effect fetch Matthew 1's chunk on every mount
+  // regardless of tab, including the signed-out welcome screen where nobody
+  // has even asked to read anything yet. Matches the activeTab check the
+  // very next effect already uses for the same reason.
   useEffect(() => {
+    if (activeTab !== 'bible') return;
     let cancelled = false;
     setVersesLoading(true);
     loadBibleChapter(selectedBook.id, selectedChapter, bibleVersion).then(verses => {
@@ -1004,7 +1011,7 @@ export default function App() {
       }
     });
     return () => { cancelled = true; };
-  }, [selectedBook, selectedChapter, bibleVersion]);
+  }, [activeTab, selectedBook, selectedChapter, bibleVersion]);
 
   // The Bible reader shares the app's main scroll container, so changing a
   // chapter otherwise leaves the new text at the previous chapter's scroll
@@ -3036,10 +3043,22 @@ export default function App() {
         </div>
       </div>
 
-      {/* Embedded HTML5 Audio Node */}
+      {/* Embedded HTML5 Audio Node. currentTrack defaults to a real track
+          (see its useState above) so the mini-player logic always has one
+          to reference, but that meant this element got a real src from the
+          very first render -- browsers start fetching audio bytes as soon
+          as <audio src> has a value, so every visit, including the signed-
+          out welcome screen, was downloading part of an mp3 nobody asked
+          for. Gated on isPlaying rather than audioSessionStarted: isPlaying
+          flips synchronously with the actual play tap, in the same render
+          the click causes, so src is already populated by the time the
+          audio-element-controls effect below calls .play() on it. Gating on
+          audioSessionStarted alone would race that effect, which runs
+          before the one that sets audioSessionStarted -- first play would
+          call .play() on an element that still had no src yet. */}
       <audio
         ref={audioRef}
-        src={currentTrack.url}
+        src={(isPlaying || audioSessionStarted) ? currentTrack.url : undefined}
         onTimeUpdate={onTimeUpdate}
         onLoadedMetadata={onLoadedMetadata}
         onEnded={onTrackEnded}
@@ -3169,7 +3188,12 @@ export default function App() {
             index.css): the branding still disappears once the form stage is
             reached, and the chooser still slides up as a bottom sheet. */}
         {!splashActive && !isLoggedIn && !passwordRecoveryMode && (
-          <div className={`auth-shell ${welcomeStage === 'form' ? 'stage-form' : ''}`}>
+          // <main>, not <div>: this is the entire page an anonymous visitor
+          // (and an anonymous crawler -- Lighthouse never logs in, so this
+          // is the actual page it audited) sees, and it had no main
+          // landmark at all. Nothing else on this screen needs excluding
+          // the way a signed-in navbar would, so the whole shell qualifies.
+          <main className={`auth-shell ${welcomeStage === 'form' ? 'stage-form' : ''}`}>
             <div className="welcome-branding-group">
               <div className="hero-orbit-wrap">
                 <div className="hero-orbit-ring hero-orbit-ring--outer" />
@@ -3424,7 +3448,7 @@ export default function App() {
           </div>
               )}
             </div>
-          </div>
+          </main>
         )}
 
         {/* ------------------ LOGGED IN APP AREA ------------------ */}
@@ -4958,7 +4982,14 @@ export default function App() {
             )}
 
             {/* ------------------ ACTIVE VIEW CONTENT ------------------ */}
-            <div
+            {/* <main>, not <div>: the audit flagged no main landmark on the
+                page at all. Scoped to just this tab-content region rather
+                than the whole .app-container -- that would also wrap the
+                navbar and the persistent mini-player below, which are
+                exactly the kind of persistent chrome a main landmark should
+                exclude. Boundaries confirmed with a real JSX parser, not by
+                eye -- this element spans ~660 lines. */}
+            <main
               className="scrollable animate-fade-in"
               ref={mainScrollRef}
               onTouchStart={handleFeedPullStart}
@@ -5617,7 +5648,7 @@ export default function App() {
                   </div>
                 </div>
               )}
-            </div>
+            </main>
 
             {/* PERSISTENT AUDIO MINI-PLAYER -- only once playback has
                 actually happened this session, and not while the user has
