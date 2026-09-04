@@ -41,3 +41,11 @@ scripts/parse-report.txt
 scripts_tmp_dr_source.txt
 scripts/src_tmp/
 scripts/parse-versions-report.txt
+
+# Android TWA build workspace (see twa/twa-manifest.json for the config
+# itself). Excluded entirely rather than picked apart file-by-file: it
+# contains android.keystore, the app's real signing key -- losing it means
+# never being able to publish an update under the same Play Store listing
+# again, and it must never end up in git history. Back the keystore up
+# externally (password manager, encrypted storage), not here.
+/twa/

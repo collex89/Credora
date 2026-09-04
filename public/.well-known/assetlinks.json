@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "app.crescamus.twa",
+    "sha256_cert_fingerprints": ["98:E7:1F:95:C7:50:CF:E0:4A:47:8A:46:0E:38:2F:2F:4F:2D:EC:AA:48:C6:7E:16:C3:49:59:6A:16:FD:B4:03"]
+  }
+}]
