@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { BIBLE_BOOKS, SAINTS, SAINT_CATEGORIES, AUDIO_TRACKS, STORIES } from './data/mockData';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import * as api from './lib/api';
