@@ -855,3 +855,187 @@ export async function deleteMyAccount() {
   if (data?.error) return { error: { message: data.error } };
   return { error: null };
 }
+
+// ------------------------------------------------------ reading goals & monitoring
+
+export const DEFAULT_READING_GOAL = {
+  daily_target_chapters: 2,
+  focus_scope: 'all', // 'all', 'bible', 'book'
+  target_book_id: null
+};
+
+export async function fetchReadingGoal(userId) {
+  let localGoal = null;
+  try {
+    const raw = localStorage.getItem('crescamus_reading_goal');
+    if (raw) localGoal = JSON.parse(raw);
+  } catch {}
+
+  if (!userId || !supabase) {
+    return localGoal || DEFAULT_READING_GOAL;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('reading_goals')
+      .select('daily_target_chapters, focus_scope, target_book_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (!error && data) {
+      try { localStorage.setItem('crescamus_reading_goal', JSON.stringify(data)); } catch {}
+      return data;
+    }
+  } catch {}
+
+  return localGoal || DEFAULT_READING_GOAL;
+}
+
+export async function saveReadingGoal(userId, goal) {
+  const cleanGoal = {
+    daily_target_chapters: Math.max(1, Math.min(50, Number(goal.daily_target_chapters) || 2)),
+    focus_scope: goal.focus_scope || 'all',
+    target_book_id: goal.target_book_id || null
+  };
+
+  try {
+    localStorage.setItem('crescamus_reading_goal', JSON.stringify(cleanGoal));
+  } catch {}
+
+  if (!userId || !supabase) return cleanGoal;
+
+  try {
+    await supabase.from('reading_goals').upsert(
+      {
+        user_id: userId,
+        ...cleanGoal,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'user_id' }
+    );
+  } catch {}
+
+  return cleanGoal;
+}
+
+export async function fetchReadingChapterLogs(userId, days = 60) {
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  const sinceStr = toDateStr(since);
+
+  let localLogs = [];
+  try {
+    const raw = localStorage.getItem('crescamus_reading_chapter_logs');
+    if (raw) localLogs = JSON.parse(raw);
+  } catch {}
+
+  if (!userId || !supabase) {
+    return (localLogs || []).filter(l => l.completed_on >= sinceStr);
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('reading_chapter_logs')
+      .select('content_type, content_id, chapter, completed_on')
+      .eq('user_id', userId)
+      .gte('completed_on', sinceStr)
+      .order('completed_on', { ascending: false });
+
+    if (!error && data) {
+      const keyMap = new Map();
+      [...data, ...localLogs].forEach(item => {
+        const k = `${item.content_type}:${item.content_id}:${item.chapter}:${item.completed_on}`;
+        if (!keyMap.has(k)) keyMap.set(k, item);
+      });
+      const merged = Array.from(keyMap.values());
+      try { localStorage.setItem('crescamus_reading_chapter_logs', JSON.stringify(merged)); } catch {}
+      return merged.filter(l => l.completed_on >= sinceStr);
+    }
+  } catch {}
+
+  return (localLogs || []).filter(l => l.completed_on >= sinceStr);
+}
+
+export async function logReadingChapterCompletion(userId, contentType, contentId, chapter, dateStr = toDateStr(new Date())) {
+  const newLog = {
+    content_type: contentType,
+    content_id: contentId,
+    chapter: Number(chapter),
+    completed_on: dateStr
+  };
+
+  try {
+    const raw = localStorage.getItem('crescamus_reading_chapter_logs');
+    const existing = raw ? JSON.parse(raw) : [];
+    const exists = existing.some(
+      l => l.content_type === contentType && l.content_id === contentId && l.chapter === Number(chapter) && l.completed_on === dateStr
+    );
+    if (!exists) {
+      existing.unshift(newLog);
+      localStorage.setItem('crescamus_reading_chapter_logs', JSON.stringify(existing.slice(0, 500)));
+    }
+  } catch {}
+
+  if (userId && supabase) {
+    try {
+      await supabase.from('reading_chapter_logs').upsert(
+        {
+          user_id: userId,
+          content_type: contentType,
+          content_id: contentId,
+          chapter: Number(chapter),
+          completed_on: dateStr
+        },
+        { onConflict: 'user_id,content_type,content_id,chapter,completed_on' }
+      );
+    } catch {}
+  }
+
+  return newLog;
+}
+
+export function computeReadingStreak(logs) {
+  const datesWithActivity = new Set((logs || []).map(l => l.completed_on));
+  const today = new Date();
+  const cursor = new Date(today);
+  if (!datesWithActivity.has(toDateStr(cursor))) cursor.setDate(cursor.getDate() - 1);
+  let streak = 0;
+  while (datesWithActivity.has(toDateStr(cursor))) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+export function computeReadingWeekCalendar(logs) {
+  const datesWithActivity = new Set((logs || []).map(l => l.completed_on));
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push({
+      label: d.toLocaleDateString('en-US', { weekday: 'narrow' }),
+      dateStr: toDateStr(d),
+      completed: datesWithActivity.has(toDateStr(d)),
+      isToday: i === 0
+    });
+  }
+  return days;
+}
+
+export function getTodayReadingProgress(logs, dailyTarget = 2) {
+  const todayStr = toDateStr(new Date());
+  const todayLogs = (logs || []).filter(l => l.completed_on === todayStr);
+  const uniqueKeys = new Set(todayLogs.map(l => `${l.content_type}:${l.content_id}:${l.chapter}`));
+  const count = uniqueKeys.size;
+  const target = Math.max(1, dailyTarget);
+  const percent = Math.min(100, Math.round((count / target) * 100));
+  const isGoalMet = count >= target;
+  return {
+    count,
+    target,
+    percent,
+    isGoalMet,
+    remaining: Math.max(0, target - count)
+  };
+}
+

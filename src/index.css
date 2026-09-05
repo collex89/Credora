@@ -4367,3 +4367,493 @@ textarea.form-input {
 .mention-suggestions {
   overscroll-behavior: contain;
 }
+
+/* ----------------------------------------------------
+   Reading Goals & Automated Progress Monitoring
+   ---------------------------------------------------- */
+.reading-goal-card {
+  background: linear-gradient(135deg, #0d1b3e 0%, #1e3a8a 60%, #172554 100%);
+  color: #fff;
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(13, 27, 62, 0.25);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  margin-bottom: 20px;
+}
+
+.reading-goal-card::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -30px;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.reading-goal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.reading-goal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reading-goal-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--secondary);
+}
+
+.reading-goal-edit-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: var(--transition);
+}
+
+.reading-goal-edit-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: var(--secondary);
+}
+
+.reading-goal-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 14px;
+}
+
+.reading-goal-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.reading-goal-numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.reading-goal-current {
+  font-size: 32px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+
+.reading-goal-target {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+}
+
+.reading-goal-subtext {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 4px;
+}
+
+.reading-goal-streak-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.reading-goal-streak-flame {
+  color: #f59e0b;
+  display: flex;
+}
+
+.reading-goal-streak-count {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--secondary);
+}
+
+.reading-goal-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.reading-goal-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+}
+
+.reading-goal-progress-fill.completed {
+  background: linear-gradient(90deg, #10b981, #34d399);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+}
+
+.reading-goal-calendar-wrap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 12px;
+}
+
+.reading-goal-week {
+  display: flex;
+  gap: 7px;
+}
+
+.reading-goal-day-dot {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  transition: var(--transition);
+}
+
+.reading-goal-day-dot.completed {
+  background: var(--secondary);
+  color: #0d1b3e;
+  font-weight: 700;
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.6);
+}
+
+.reading-goal-day-dot.is-today {
+  outline: 1.5px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
+}
+
+.reading-goal-action-btn {
+  background: rgba(212, 175, 55, 0.18);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: var(--transition);
+}
+
+.reading-goal-action-btn:hover {
+  background: rgba(212, 175, 55, 0.35);
+  color: #fff;
+}
+
+/* Reader Inline Completion Badge */
+.chapter-completion-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(var(--secondary-rgb), 0.08);
+  border: 1px solid rgba(var(--secondary-rgb), 0.25);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-top: 20px;
+  margin-bottom: 8px;
+  animation: fadeIn 0.3s ease;
+}
+
+.chapter-completion-badge.completed {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.chapter-completion-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.chapter-completion-status-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.chapter-completion-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.chapter-completion-toggle-btn.active {
+  background: #10b981;
+  border-color: #10b981;
+  color: #fff;
+}
+
+/* Toast for Goal & Chapter Events */
+.goal-celebration-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #0d1b3e, #1e3a8a);
+  color: #fff;
+  border: 1px solid var(--secondary);
+  border-radius: 999px;
+  padding: 10px 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 1000;
+  animation: toastSlideUp 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  max-width: 90%;
+  text-align: center;
+}
+
+@keyframes toastSlideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* Quick Goal Bar in Bible / Classics */
+.bible-goal-quick-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.bible-goal-quick-bar:hover {
+  border-color: var(--secondary);
+}
+
+.bible-goal-quick-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bible-goal-quick-icon {
+  color: var(--secondary);
+  display: flex;
+}
+
+.bible-goal-quick-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.bible-goal-quick-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.bible-goal-quick-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* Goal Configuration Modal */
+.reading-goal-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+.reading-goal-modal {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 440px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  animation: zoomIn 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.reading-goal-modal-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reading-goal-modal-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.reading-goal-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.goal-option-section label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.goal-chapter-chips {
+  display: flex;
+  gap: 8px;
+}
+
+.goal-chip {
+  flex: 1;
+  padding: 10px 0;
+  text-align: center;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  background: transparent;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.goal-chip:hover {
+  border-color: var(--secondary);
+}
+
+.goal-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.25);
+}
+
+.goal-scope-selector {
+  display: flex;
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.05);
+  padding: 4px;
+  gap: 4px;
+}
+
+.goal-scope-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.goal-scope-btn.active {
+  background: var(--surface);
+  color: var(--primary);
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.reading-stats-card {
+  background: rgba(var(--secondary-rgb), 0.08);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  text-align: center;
+}
+
+.reading-stat-item-val {
+  font-size: 18px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.reading-stat-item-lbl {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.reading-goal-modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
