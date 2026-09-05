@@ -1028,9 +1028,16 @@ export function computeReadingWeekCalendar(logs) {
   return days;
 }
 
-export function getTodayReadingProgress(logs, dailyTarget = 2) {
+// focusScope ('all' | 'bible' | 'book') matches reading_goals.focus_scope
+// directly against a log's own content_type. Previously accepted but never
+// looked at here -- "Bible Only" saved correctly but a completed Classics
+// chapter still counted toward the goal exactly the same as "All Reading"
+// would have, since nothing ever filtered on it.
+export function getTodayReadingProgress(logs, dailyTarget = 2, focusScope = 'all') {
   const todayStr = toDateStr(new Date());
-  const todayLogs = (logs || []).filter(l => l.completed_on === todayStr);
+  const todayLogs = (logs || []).filter(l =>
+    l.completed_on === todayStr && (focusScope === 'all' || l.content_type === focusScope)
+  );
   const uniqueKeys = new Set(todayLogs.map(l => `${l.content_type}:${l.content_id}:${l.chapter}`));
   const count = uniqueKeys.size;
   const target = Math.max(1, dailyTarget);

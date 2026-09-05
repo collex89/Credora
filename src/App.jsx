@@ -2720,8 +2720,23 @@ export default function App() {
       };
       const nextLogs = [newLog, ...prevLogs];
 
-      const progress = api.getTodayReadingProgress(nextLogs, readingGoal?.daily_target_chapters || 2);
-      if (progress.isGoalMet && progress.count === progress.target) {
+      // A goal scoped to "Bible Only" or "Classics Only" shouldn't claim a
+      // Classics chapter (or vice versa) moved the needle -- it doesn't,
+      // now that getTodayReadingProgress actually filters by scope below.
+      // Still logged either way (readingLogs is the full history, used
+      // for total-chapters-completed and the streak regardless of the
+      // goal's current scope); only the celebratory, count-bearing toast
+      // is skipped when this particular chapter falls outside it.
+      const focusScope = readingGoal?.focus_scope || 'all';
+      const isInScope = focusScope === 'all' || focusScope === contentType;
+      const progress = api.getTodayReadingProgress(nextLogs, readingGoal?.daily_target_chapters || 2, focusScope);
+
+      if (!isInScope) {
+        triggerCelebrationToast(
+          '📖 Chapter Completed!',
+          "Nice reading -- this one's outside your current goal focus, so it won't count toward today's target."
+        );
+      } else if (progress.isGoalMet && progress.count === progress.target) {
         const streak = api.computeReadingStreak(nextLogs);
         triggerCelebrationToast(
           '🎉 Daily Reading Goal Achieved!',
@@ -2735,7 +2750,7 @@ export default function App() {
       }
       return nextLogs;
     });
-  }, [session, readingGoal?.daily_target_chapters]);
+  }, [session, readingGoal?.daily_target_chapters, readingGoal?.focus_scope]);
 
   const toggleChapterCompletion = (contentType, contentId, chapterNum) => {
     const currentTodayStr = new Date().toISOString().slice(0, 10);
@@ -2845,7 +2860,7 @@ export default function App() {
   // Computed Reading Progress metrics
   const todayDateStr = new Date().toISOString().slice(0, 10);
   const readingStreakCount = api.computeReadingStreak(readingLogs);
-  const todayReadingProgress = api.getTodayReadingProgress(readingLogs, readingGoal?.daily_target_chapters || 2);
+  const todayReadingProgress = api.getTodayReadingProgress(readingLogs, readingGoal?.daily_target_chapters || 2, readingGoal?.focus_scope || 'all');
   const isCurrentBibleChapterCompleted = readingLogs.some(
     l => l.content_type === 'bible' && l.content_id === selectedBook?.id && l.chapter === Number(selectedChapter) && l.completed_on === todayDateStr
   );
