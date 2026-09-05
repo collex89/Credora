@@ -625,6 +625,8 @@ export default function App() {
   // reading_progress table so "Continue Reading" on Home can point at
   // whichever of the two a person read most recently.
   const [activeBook, setActiveBook] = useState(null); // a BOOKS_LIBRARY entry, or null
+  const [selectedClassicBook, setSelectedClassicBook] = useState(null); // classic book chosen to pick a chapter
+  const [classicBookProgressChapter, setClassicBookProgressChapter] = useState(null); // saved progress chapter for chosen book
   const [activeBookChapter, setActiveBookChapter] = useState(1);
   const [bookChapterText, setBookChapterText] = useState('');
   const [bookChapterLoading, setBookChapterLoading] = useState(false);
@@ -2588,21 +2590,32 @@ export default function App() {
     setPersonProfileTab('posts'); // always start on Posts, not whatever tab the last profile visited was left on
   };
 
-  // Opens a Catholic Classics book at wherever this specific book's own
-  // reading_progress row left off -- not latestReadingProgress, which
-  // only ever holds the single most recent book/Bible chapter read
-  // *overall* and would be wrong here the moment someone's read anything
-  // else since. Falls back to chapter 1 for a book never opened before.
-  const openBook = async (book) => {
-    setActiveBook(book);
-    setBookChapterText('');
-    let startChapter = 1;
+  // Opens a Catholic Classics book's chapter picker, prefetching any saved
+  // reading_progress row so the chapter grid highlights it and offers a quick resume.
+  const handleSelectClassicBook = async (book) => {
+    setSelectedClassicBook(book);
+    let startChapter = null;
     if (isSupabaseConfigured && session) {
-      const progress = await api.fetchReadingProgressFor(session.user.id, 'book', book.id);
-      if (progress?.chapter) startChapter = progress.chapter;
+      try {
+        const progress = await api.fetchReadingProgressFor(session.user.id, 'book', book.id);
+        if (progress?.chapter) startChapter = progress.chapter;
+      } catch (e) {}
     }
-    setActiveBookChapter(startChapter);
+    setClassicBookProgressChapter(startChapter);
+  };
+
+  // Opens a specific chapter of a Catholic Classics book in the reader.
+  const openBookAtChapter = (book, chapterNum = 1) => {
+    setActiveBook(book);
+    setSelectedClassicBook(book);
+    setActiveBookChapter(chapterNum);
+    setBookChapterText('');
     setSubView('bookReader');
+  };
+
+  // Legacy/convenience wrapper for opening a book directly into chapter selection
+  const openBook = async (book) => {
+    await handleSelectClassicBook(book);
   };
 
   // Home's Continue Reading banner action -- jumps straight into reading
@@ -2626,6 +2639,7 @@ export default function App() {
       const book = BOOKS_LIBRARY.find(b => b.id === content_id);
       if (!book) return;
       setActiveBook(book);
+      setSelectedClassicBook(book);
       setActiveBookChapter(chapter);
       setBookChapterText('');
       setSubView('bookReader');
@@ -4909,23 +4923,78 @@ export default function App() {
             {/* ------------------ VIEW: CATHOLIC CLASSICS LIBRARY ------------------ */}
             {subView === 'booksLibrary' && (
               <div className="saint-details-view">
-                <div className="person-view-header">
-                  <button className="icon-btn" onClick={() => setSubView(null)}>
-                    <Icons.ChevronLeft />
-                  </button>
-                  <h3>Catholic Classics</h3>
-                  <div style={{ width: '24px' }}></div>
-                </div>
-                <div className="scrollable">
-                  {BOOKS_LIBRARY.map(book => (
-                    <div key={book.id} className="card" style={{ marginBottom: '12px', cursor: 'pointer' }} onClick={() => openBook(book)}>
-                      <h4 style={{ fontSize: '15px', marginBottom: '2px' }}>{book.title}</h4>
-                      <p style={{ fontSize: '12px', color: 'var(--secondary)', marginBottom: '6px' }}>{book.author}</p>
-                      <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{book.description}</p>
-                      <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>{book.totalChapters} chapters · {book.license}</p>
+                {selectedClassicBook ? (
+                  <>
+                    <div className="person-view-header">
+                      <button className="icon-btn" onClick={() => setSelectedClassicBook(null)}>
+                        <Icons.ChevronLeft />
+                      </button>
+                      <h3 style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {selectedClassicBook.title}
+                      </h3>
+                      <div style={{ width: '24px' }}></div>
                     </div>
-                  ))}
-                </div>
+                    <div className="scrollable">
+                      <div className="card" style={{ marginBottom: '16px', background: 'linear-gradient(135deg, rgba(212,175,55,0.08), rgba(30,58,138,0.04))', border: '1px solid rgba(var(--secondary-rgb), 0.25)' }}>
+                        <h4 style={{ fontSize: '15px', marginBottom: '2px' }}>{selectedClassicBook.title}</h4>
+                        <p style={{ fontSize: '12px', color: 'var(--secondary)', marginBottom: '6px' }}>{selectedClassicBook.author}</p>
+                        <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{selectedClassicBook.description}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border)' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{selectedClassicBook.totalChapters} Chapters · {selectedClassicBook.license}</span>
+                          {classicBookProgressChapter && (
+                            <button
+                              className="filter-pill active"
+                              style={{ fontSize: '11px', padding: '4px 10px', cursor: 'pointer' }}
+                              onClick={() => openBookAtChapter(selectedClassicBook, classicBookProgressChapter)}
+                            >
+                              Resume Ch. {classicBookProgressChapter}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <h4 className="settings-section-title" style={{ margin: '8px 0 12px' }}>Select Chapter</h4>
+                      <div className="chapter-grid" style={{ marginBottom: '32px' }}>
+                        {Array.from({ length: selectedClassicBook.totalChapters }, (_, i) => i + 1).map(num => (
+                          <button
+                            key={num}
+                            className={`chapter-cell ${
+                              (activeBook?.id === selectedClassicBook.id ? activeBookChapter : classicBookProgressChapter) === num ? 'active' : ''
+                            }`}
+                            onClick={() => openBookAtChapter(selectedClassicBook, num)}
+                          >
+                            {num}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="person-view-header">
+                      <button className="icon-btn" onClick={() => setSubView(null)}>
+                        <Icons.ChevronLeft />
+                      </button>
+                      <h3>Catholic Classics</h3>
+                      <div style={{ width: '24px' }}></div>
+                    </div>
+                    <div className="scrollable">
+                      {BOOKS_LIBRARY.map(book => (
+                        <div key={book.id} className="card" style={{ marginBottom: '12px', cursor: 'pointer' }} onClick={() => handleSelectClassicBook(book)}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                              <h4 style={{ fontSize: '15px', marginBottom: '2px' }}>{book.title}</h4>
+                              <p style={{ fontSize: '12px', color: 'var(--secondary)', marginBottom: '6px' }}>{book.author}</p>
+                            </div>
+                            <span style={{ color: 'var(--secondary)', display: 'flex', marginTop: '4px' }}><Icons.ChevronRight /></span>
+                          </div>
+                          <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{book.description}</p>
+                          <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>{book.totalChapters} chapters · {book.license}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -4933,16 +5002,30 @@ export default function App() {
             {subView === 'bookReader' && activeBook && (
               <div className="saint-details-view">
                 <div className="person-view-header">
-                  <button className="icon-btn" onClick={() => { setSubView('booksLibrary'); setActiveBook(null); }}>
+                  <button className="icon-btn" onClick={() => { setSelectedClassicBook(activeBook); setSubView('booksLibrary'); }}>
                     <Icons.ChevronLeft />
                   </button>
-                  <h3>{activeBook.title}</h3>
-                  <div style={{ width: '24px' }}></div>
+                  <h3 style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeBook.title}</h3>
+                  <button
+                    className="icon-btn"
+                    title="Select Chapter"
+                    onClick={() => { setSelectedClassicBook(activeBook); setSubView('booksLibrary'); }}
+                  >
+                    <Icons.BookOpen />
+                  </button>
                 </div>
                 <div className="scrollable">
-                  <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                    Chapter {activeBookChapter} of {activeBook.totalChapters}
-                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+                    <button
+                      className="filter-pill"
+                      style={{ fontSize: '11.5px', padding: '5px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', background: 'var(--card-bg, rgba(255,255,255,0.05))', border: '1px solid var(--border)' }}
+                      onClick={() => { setSelectedClassicBook(activeBook); setSubView('booksLibrary'); }}
+                      title="Click to jump to any chapter"
+                    >
+                      <span>Chapter {activeBookChapter} of {activeBook.totalChapters}</span>
+                      <Icons.ChevronDown />
+                    </button>
+                  </div>
                   {bookChapterLoading ? (
                     <div className="verse-skeleton-group">
                       {[...Array(6)].map((_, i) => <div key={i} className="verse-skeleton" />)}
@@ -5350,6 +5433,19 @@ export default function App() {
                     <span style={{ color: 'var(--secondary)', display: 'flex' }}><Icons.Sparkles /></span>
                   </div>
 
+                  {/* Catholic Classics Quick Discover Banner — lets people discover
+                      the spiritual classics library directly from Home. */}
+                  <div className="card" style={{ marginBottom: '16px', background: 'linear-gradient(135deg, rgba(212,175,55,0.1), rgba(30,58,138,0.05))', border: '1px solid rgba(var(--secondary-rgb), 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => {
+                    setSelectedClassicBook(null);
+                    setSubView('booksLibrary');
+                  }}>
+                    <div>
+                      <h4 style={{ color: 'var(--primary)', fontSize: '14px' }}>Catholic Classics</h4>
+                      <p style={{ fontSize: '11px', marginTop: '2px' }}>The Imitation of Christ, Confessions, and more.</p>
+                    </div>
+                    <span style={{ color: 'var(--secondary)', display: 'flex' }}><Icons.BookOpen /></span>
+                  </div>
+
                   {homeFeedPosts.length === 0 && (
                     <div className="search-empty-state">
                       <span className="empty-state-icon"><Icons.Comment /></span>
@@ -5415,12 +5511,12 @@ export default function App() {
                       Home's Discover the Saints banner: a feature with no other
                       obvious entry point gets a card at the top of the screen
                       people already land on for reading. */}
-                  <div className="card" style={{ margin: '0 0 16px', background: 'linear-gradient(135deg, rgba(212,175,55,0.1), rgba(30,58,138,0.05))', border: '1px solid rgba(var(--secondary-rgb), 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setSubView('booksLibrary')}>
+                  <div className="card" style={{ margin: '0 0 16px', background: 'linear-gradient(135deg, rgba(212,175,55,0.1), rgba(30,58,138,0.05))', border: '1px solid rgba(var(--secondary-rgb), 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => { setSelectedClassicBook(null); setSubView('booksLibrary'); }}>
                     <div>
                       <h4 style={{ color: 'var(--primary)', fontSize: '14px' }}>Catholic Classics</h4>
                       <p style={{ fontSize: '11px', marginTop: '2px' }}>The Imitation of Christ, Confessions, and more.</p>
                     </div>
-                    <span style={{ color: 'var(--secondary)', display: 'flex' }}><Icons.Bible /></span>
+                    <span style={{ color: 'var(--secondary)', display: 'flex' }}><Icons.BookOpen /></span>
                   </div>
 
                   {/* Reading mode selection logic */}
