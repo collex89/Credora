@@ -373,6 +373,47 @@ export async function removeBibleBookmark(userId, bookId, chapter, verse) {
   return supabase.from('bible_bookmarks').delete().match({ user_id: userId, book_id: bookId, chapter, verse });
 }
 
+// ------------------------------------------------------ reading progress
+
+// The single most recently updated row across every book/Bible book this
+// user has read anything of -- what the Home screen's "Continue Reading"
+// banner shows. null if they've never read anything yet.
+export async function fetchLatestReadingProgress(userId) {
+  const { data, error } = await supabase
+    .from('reading_progress')
+    .select('content_type, content_id, chapter, bible_version, updated_at')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return null;
+  return data;
+}
+
+// One row per (user, content_type, content_id) -- keyed as
+// "book:confessions" or "bible:mat" -- so resuming a specific earlier
+// book remembers its own last chapter even after reading further
+// elsewhere since. bibleVersion is only stored/relevant for content_type
+// 'bible'.
+export async function fetchReadingProgressFor(userId, contentType, contentId) {
+  const { data, error } = await supabase
+    .from('reading_progress')
+    .select('chapter, bible_version')
+    .eq('user_id', userId)
+    .eq('content_type', contentType)
+    .eq('content_id', contentId)
+    .maybeSingle();
+  if (error) return null;
+  return data;
+}
+
+export async function saveReadingProgress(userId, contentType, contentId, chapter, bibleVersion = null) {
+  return supabase.from('reading_progress').upsert(
+    { user_id: userId, content_type: contentType, content_id: contentId, chapter, bible_version: bibleVersion, updated_at: new Date().toISOString() },
+    { onConflict: 'user_id,content_type,content_id' }
+  );
+}
+
 // -------------------------------------------------------------- mutes
 
 export async function fetchMutes(myId) {

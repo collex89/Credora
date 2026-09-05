@@ -3,6 +3,7 @@ import { BIBLE_BOOKS, SAINTS, SAINT_CATEGORIES, AUDIO_TRACKS, STORIES } from './
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import * as api from './lib/api';
 import { loadBibleChapter, versionHasBook, BIBLE_VERSIONS } from './lib/bible';
+import { loadBookChapter, BOOKS_LIBRARY } from './lib/books';
 import { getDailyVerse } from './data/dailyVerses';
 import { PRIVACY_POLICY, TERMS_OF_SERVICE } from './data/legalContent';
 import { MISSION, ABOUT_FEATURES, CONTENT_SOURCING_NOTE } from './data/aboutContent';
@@ -619,6 +620,18 @@ export default function App() {
   const [chapterGridBook, setChapterGridBook] = useState(null); // book awaiting a chapter pick
   const [chapterVerses, setChapterVerses] = useState([]);
   const [versesLoading, setVersesLoading] = useState(true);
+  // Catholic spiritual classics (see src/lib/books.js) -- a separate small
+  // reading feature alongside the Bible, sharing the same
+  // reading_progress table so "Continue Reading" on Home can point at
+  // whichever of the two a person read most recently.
+  const [activeBook, setActiveBook] = useState(null); // a BOOKS_LIBRARY entry, or null
+  const [activeBookChapter, setActiveBookChapter] = useState(1);
+  const [bookChapterText, setBookChapterText] = useState('');
+  const [bookChapterLoading, setBookChapterLoading] = useState(false);
+  // The single most recently updated reading_progress row across both
+  // Bible and Books, for Home's "Continue Reading" banner. null until
+  // fetched, and null forever for someone who's never read anything.
+  const [latestReadingProgress, setLatestReadingProgress] = useState(null);
   // Was plain useState('dr') with nothing ever saving it, so picking KJV
   // or WEB reset back to Douay-Rheims on the next visit -- same class of
   // bug as theme/feedMode. Reads the saved choice back, falling back to
@@ -1022,6 +1035,55 @@ export default function App() {
     mainScrollRef.current?.scrollTo({ top: 0 });
   }, [activeTab, selectedBook, selectedChapter, verseModeActive]);
 
+  // Remembers this chapter as "where they left off" for Home's Continue
+  // Reading banner. Gated on verseModeActive specifically, not just
+  // activeTab === 'bible': selectedBook/selectedChapter already hold a
+  // sensible default (Matthew 1) the moment the Bible tab opens, even
+  // while someone's still on the book/chapter picker grids rather than
+  // actually reading -- saving progress on that default would claim they
+  // were reading Matthew 1 when they never opened it. Debounced so
+  // quickly flipping through several chapters doesn't fire a write per
+  // chapter, only once things settle.
+  useEffect(() => {
+    if (!isSupabaseConfigured || !session || activeTab !== 'bible' || !verseModeActive) return;
+    const timer = setTimeout(() => {
+      api.saveReadingProgress(session.user.id, 'bible', selectedBook.id, selectedChapter, bibleVersion).then(() => {
+        // Keeps Home's Continue Reading banner current within this same
+        // session -- otherwise it would only ever reflect whatever was
+        // true at the last login, not anything read since.
+        setLatestReadingProgress({ content_type: 'bible', content_id: selectedBook.id, chapter: selectedChapter, bible_version: bibleVersion });
+      }).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [session, activeTab, verseModeActive, selectedBook, selectedChapter, bibleVersion]);
+
+  // Same lazy-per-chapter loading as the Bible reader, gated the same way
+  // (see the comment on the Bible chapter effect above for why the guard
+  // matters) -- activeBook is only ever non-null while the book reader
+  // subView is actually open, so that alone is enough here.
+  useEffect(() => {
+    if (!activeBook) return;
+    let cancelled = false;
+    setBookChapterLoading(true);
+    loadBookChapter(activeBook.id, activeBookChapter).then(text => {
+      if (!cancelled) {
+        setBookChapterText(text || '');
+        setBookChapterLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [activeBook, activeBookChapter]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !session || !activeBook) return;
+    const timer = setTimeout(() => {
+      api.saveReadingProgress(session.user.id, 'book', activeBook.id, activeBookChapter).then(() => {
+        setLatestReadingProgress({ content_type: 'book', content_id: activeBook.id, chapter: activeBookChapter, bible_version: null });
+      }).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [session, activeBook, activeBookChapter]);
+
   // 2b. Track the Supabase auth session (live mode only)
   useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -1067,7 +1129,7 @@ export default function App() {
         setAuthKnown(true);
         return;
       }
-      const [community, feed, followerCount, notifs, convos, unreadMsgs, logs, intentions, myBlocks, myMutes, highlights, bookmarks] = await Promise.all([
+      const [community, feed, followerCount, notifs, convos, unreadMsgs, logs, intentions, myBlocks, myMutes, highlights, bookmarks, readingProgress] = await Promise.all([
         api.fetchCommunity(session.user.id),
         api.fetchFeed(session.user.id),
         api.fetchMyFollowerCount(session.user.id),
@@ -1079,7 +1141,8 @@ export default function App() {
         api.fetchBlocks(session.user.id),
         api.fetchMutes(session.user.id),
         api.fetchBibleHighlights(session.user.id),
-        api.fetchBibleBookmarks(session.user.id)
+        api.fetchBibleBookmarks(session.user.id),
+        api.fetchLatestReadingProgress(session.user.id)
       ]);
       if (cancelled) return;
       setUsername(profile.full_name || profile.username);
@@ -1111,6 +1174,7 @@ export default function App() {
       setMutedUserIds(new Set(myMutes));
       setBibleHighlights(highlights);
       setBibleBookmarks(bookmarks);
+      setLatestReadingProgress(readingProgress);
       setIsLoggedIn(true);
       setAuthKnown(true);
     })();
@@ -2522,6 +2586,50 @@ export default function App() {
     setActivePerson(person.id);
     setSubView('person');
     setPersonProfileTab('posts'); // always start on Posts, not whatever tab the last profile visited was left on
+  };
+
+  // Opens a Catholic Classics book at wherever this specific book's own
+  // reading_progress row left off -- not latestReadingProgress, which
+  // only ever holds the single most recent book/Bible chapter read
+  // *overall* and would be wrong here the moment someone's read anything
+  // else since. Falls back to chapter 1 for a book never opened before.
+  const openBook = async (book) => {
+    setActiveBook(book);
+    setBookChapterText('');
+    let startChapter = 1;
+    if (isSupabaseConfigured && session) {
+      const progress = await api.fetchReadingProgressFor(session.user.id, 'book', book.id);
+      if (progress?.chapter) startChapter = progress.chapter;
+    }
+    setActiveBookChapter(startChapter);
+    setSubView('bookReader');
+  };
+
+  // Home's Continue Reading banner action -- jumps straight into reading
+  // mode at exactly the chapter latestReadingProgress recorded, for
+  // whichever of the two reading features (Bible or Catholic Classics)
+  // was read most recently. Silently does nothing if the referenced book
+  // id no longer matches anything (e.g. a stale row from a book id that
+  // changed) rather than risk opening the wrong content.
+  const resumeReading = () => {
+    if (!latestReadingProgress) return;
+    const { content_type, content_id, chapter, bible_version } = latestReadingProgress;
+    if (content_type === 'bible') {
+      const book = BIBLE_BOOKS.find(b => b.id === content_id);
+      if (!book) return;
+      setSelectedBook(book);
+      setSelectedChapter(chapter);
+      if (bible_version) setBibleVersion(bible_version);
+      setVerseModeActive(true);
+      setActiveTab('bible');
+    } else if (content_type === 'book') {
+      const book = BOOKS_LIBRARY.find(b => b.id === content_id);
+      if (!book) return;
+      setActiveBook(book);
+      setActiveBookChapter(chapter);
+      setBookChapterText('');
+      setSubView('bookReader');
+    }
   };
 
   // Accepts either a community-list user ({id, name, username, avatar}) or
@@ -4798,6 +4906,72 @@ export default function App() {
               </div>
             )}
 
+            {/* ------------------ VIEW: CATHOLIC CLASSICS LIBRARY ------------------ */}
+            {subView === 'booksLibrary' && (
+              <div className="saint-details-view">
+                <div className="person-view-header">
+                  <button className="icon-btn" onClick={() => setSubView(null)}>
+                    <Icons.ChevronLeft />
+                  </button>
+                  <h3>Catholic Classics</h3>
+                  <div style={{ width: '24px' }}></div>
+                </div>
+                <div className="scrollable">
+                  {BOOKS_LIBRARY.map(book => (
+                    <div key={book.id} className="card" style={{ marginBottom: '12px', cursor: 'pointer' }} onClick={() => openBook(book)}>
+                      <h4 style={{ fontSize: '15px', marginBottom: '2px' }}>{book.title}</h4>
+                      <p style={{ fontSize: '12px', color: 'var(--secondary)', marginBottom: '6px' }}>{book.author}</p>
+                      <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{book.description}</p>
+                      <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>{book.totalChapters} chapters · {book.license}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ------------------ VIEW: BOOK READER ------------------ */}
+            {subView === 'bookReader' && activeBook && (
+              <div className="saint-details-view">
+                <div className="person-view-header">
+                  <button className="icon-btn" onClick={() => { setSubView('booksLibrary'); setActiveBook(null); }}>
+                    <Icons.ChevronLeft />
+                  </button>
+                  <h3>{activeBook.title}</h3>
+                  <div style={{ width: '24px' }}></div>
+                </div>
+                <div className="scrollable">
+                  <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                    Chapter {activeBookChapter} of {activeBook.totalChapters}
+                  </p>
+                  {bookChapterLoading ? (
+                    <div className="verse-skeleton-group">
+                      {[...Array(6)].map((_, i) => <div key={i} className="verse-skeleton" />)}
+                    </div>
+                  ) : (
+                    <p className="reading-text" style={{ whiteSpace: 'pre-line', lineHeight: 1.7, fontSize: '14.5px' }}>{bookChapterText}</p>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginTop: '24px' }}>
+                    <button
+                      className="auth-btn"
+                      style={{ flex: 1, opacity: activeBookChapter <= 1 ? 0.4 : 1 }}
+                      disabled={activeBookChapter <= 1}
+                      onClick={() => setActiveBookChapter(c => Math.max(1, c - 1))}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      className="auth-btn"
+                      style={{ flex: 1, opacity: activeBookChapter >= activeBook.totalChapters ? 0.4 : 1 }}
+                      disabled={activeBookChapter >= activeBook.totalChapters}
+                      onClick={() => setActiveBookChapter(c => Math.min(activeBook.totalChapters, c + 1))}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ------------------ VIEW: EDIT POST ------------------ */}
             {editingPost && (
               <div className="saint-details-view">
@@ -5140,6 +5314,28 @@ export default function App() {
                     <span className="composer-trigger-plus"><Icons.Plus /></span>
                   </button>
 
+                  {/* Continue Reading — points at whichever of the Bible or
+                      Catholic Classics reading_progress last recorded, across
+                      both features (see resumeReading). Absent entirely for
+                      someone who's never read anything yet, rather than
+                      showing an empty/placeholder card. */}
+                  {latestReadingProgress && (() => {
+                    const isBible = latestReadingProgress.content_type === 'bible';
+                    const label = isBible
+                      ? BIBLE_BOOKS.find(b => b.id === latestReadingProgress.content_id)?.name
+                      : BOOKS_LIBRARY.find(b => b.id === latestReadingProgress.content_id)?.title;
+                    if (!label) return null;
+                    return (
+                      <div className="card" style={{ marginBottom: '16px', background: 'linear-gradient(135deg, rgba(30,58,138,0.1), rgba(212,175,55,0.05))', border: '1px solid rgba(var(--secondary-rgb), 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={resumeReading}>
+                        <div>
+                          <h4 style={{ color: 'var(--primary)', fontSize: '14px' }}>Continue Reading</h4>
+                          <p style={{ fontSize: '11px', marginTop: '2px' }}>{label} · Chapter {latestReadingProgress.chapter}</p>
+                        </div>
+                        <span style={{ color: 'var(--secondary)', display: 'flex' }}><Icons.ChevronRight /></span>
+                      </div>
+                    );
+                  })()}
+
                   {/* Saints Quick Discover Banner — the Saints library otherwise
                       has no obvious entry point from Home, where most people land. */}
                   <div className="card" style={{ marginBottom: '16px', background: 'linear-gradient(135deg, rgba(212,175,55,0.1), rgba(30,58,138,0.05))', border: '1px solid rgba(var(--secondary-rgb), 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => {
@@ -5214,6 +5410,18 @@ export default function App() {
                       </div>
                     </div>
                   )}
+
+                  {/* Catholic Classics Quick Discover Banner -- same pattern as
+                      Home's Discover the Saints banner: a feature with no other
+                      obvious entry point gets a card at the top of the screen
+                      people already land on for reading. */}
+                  <div className="card" style={{ margin: '0 0 16px', background: 'linear-gradient(135deg, rgba(212,175,55,0.1), rgba(30,58,138,0.05))', border: '1px solid rgba(var(--secondary-rgb), 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setSubView('booksLibrary')}>
+                    <div>
+                      <h4 style={{ color: 'var(--primary)', fontSize: '14px' }}>Catholic Classics</h4>
+                      <p style={{ fontSize: '11px', marginTop: '2px' }}>The Imitation of Christ, Confessions, and more.</p>
+                    </div>
+                    <span style={{ color: 'var(--secondary)', display: 'flex' }}><Icons.Bible /></span>
+                  </div>
 
                   {/* Reading mode selection logic */}
                   {chapterGridBook ? (
