@@ -861,7 +861,12 @@ export async function deleteMyAccount() {
 export const DEFAULT_READING_GOAL = {
   daily_target_chapters: 2,
   focus_scope: 'all', // 'all', 'bible', 'book'
-  target_book_id: null
+  target_book_id: null,
+  // Off until someone explicitly turns it on (see migration 026) -- this
+  // used to be implied "on" just by a row existing, which is what drove
+  // automatic chapter tracking and a completion toast for every reader
+  // whether they wanted it or not.
+  enabled: false
 };
 
 export async function fetchReadingGoal(userId) {
@@ -878,7 +883,7 @@ export async function fetchReadingGoal(userId) {
   try {
     const { data, error } = await supabase
       .from('reading_goals')
-      .select('daily_target_chapters, focus_scope, target_book_id')
+      .select('daily_target_chapters, focus_scope, target_book_id, enabled')
       .eq('user_id', userId)
       .maybeSingle();
     if (!error && data) {
@@ -894,7 +899,8 @@ export async function saveReadingGoal(userId, goal) {
   const cleanGoal = {
     daily_target_chapters: Math.max(1, Math.min(50, Number(goal.daily_target_chapters) || 2)),
     focus_scope: goal.focus_scope || 'all',
-    target_book_id: goal.target_book_id || null
+    target_book_id: goal.target_book_id || null,
+    enabled: !!goal.enabled
   };
 
   try {

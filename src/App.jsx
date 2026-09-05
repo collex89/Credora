@@ -661,12 +661,16 @@ export default function App() {
   const [versionPickerOpen, setVersionPickerOpen] = useState(false);
 
   // Reading Goals & Automated Progress Monitoring
+  // enabled defaults false: goal tracking (and the automatic chapter
+  // logging tied to it, below) only ever runs once someone explicitly
+  // turns it on in the goal modal -- not implicitly just because a saved
+  // target exists (see migration 026).
   const [readingGoal, setReadingGoal] = useState(() => {
     try {
       const raw = localStorage.getItem('crescamus_reading_goal');
-      return raw ? JSON.parse(raw) : { daily_target_chapters: 2, focus_scope: 'all', target_book_id: null };
+      return raw ? JSON.parse(raw) : { daily_target_chapters: 2, focus_scope: 'all', target_book_id: null, enabled: false };
     } catch {
-      return { daily_target_chapters: 2, focus_scope: 'all', target_book_id: null };
+      return { daily_target_chapters: 2, focus_scope: 'all', target_book_id: null, enabled: false };
     }
   });
   const [readingLogs, setReadingLogs] = useState(() => {
@@ -680,6 +684,7 @@ export default function App() {
   const [showReadingGoalModal, setShowReadingGoalModal] = useState(false);
   const [goalInputChapters, setGoalInputChapters] = useState(2);
   const [goalInputScope, setGoalInputScope] = useState('all');
+  const [goalInputEnabled, setGoalInputEnabled] = useState(false);
   const [readingCelebrationToast, setReadingCelebrationToast] = useState(null);
 
   // Sentinel refs & timers for automatic chapter completion tracking
@@ -2651,11 +2656,6 @@ export default function App() {
     setSubView('bookReader');
   };
 
-  // Legacy/convenience wrapper for opening a book directly into chapter selection
-  const openBook = async (book) => {
-    await handleSelectClassicBook(book);
-  };
-
   // Home's Continue Reading banner action -- jumps straight into reading
   // mode at exactly the chapter latestReadingProgress recorded, for
   // whichever of the two reading features (Bible or Catholic Classics)
@@ -2688,6 +2688,7 @@ export default function App() {
   const openReadingGoalModal = () => {
     setGoalInputChapters(readingGoal?.daily_target_chapters || 2);
     setGoalInputScope(readingGoal?.focus_scope || 'all');
+    setGoalInputEnabled(!!readingGoal?.enabled);
     setShowReadingGoalModal(true);
   };
 
@@ -2757,12 +2758,18 @@ export default function App() {
     const saved = await api.saveReadingGoal(session?.user?.id || null, updatedGoal);
     setReadingGoal(saved);
     setShowReadingGoalModal(false);
-    triggerCelebrationToast('🎯 Reading Goal Updated', `Daily target set to ${saved.daily_target_chapters} chapters.`);
+    triggerCelebrationToast(
+      saved.enabled ? '🎯 Reading Goal Set' : 'Reading Goal Turned Off',
+      saved.enabled ? `Daily target set to ${saved.daily_target_chapters} chapters.` : 'Chapters will no longer be tracked automatically.'
+    );
   };
 
-  // Automated reading monitoring for Bible reader: triggers when user scrolls to bottom of chapter and has spent reading time
+  // Automated reading monitoring for Bible reader: triggers when user scrolls to bottom of chapter and has spent reading time.
+  // Gated on readingGoal.enabled -- someone who's never turned goal
+  // tracking on shouldn't have chapters silently logged and a
+  // celebration toast fired without ever having asked for either.
   useEffect(() => {
-    if (activeTab !== 'bible' || !verseModeActive || versesLoading || chapterVerses.length === 0 || !selectedBook) return;
+    if (!readingGoal?.enabled || activeTab !== 'bible' || !verseModeActive || versesLoading || chapterVerses.length === 0 || !selectedBook) return;
 
     bibleChapterStartTimeRef.current = Date.now();
     const sentinel = bibleSentinelRef.current;
@@ -2795,11 +2802,12 @@ export default function App() {
       observer.disconnect();
       if (dwellTimeout) clearTimeout(dwellTimeout);
     };
-  }, [activeTab, verseModeActive, versesLoading, chapterVerses, selectedBook, selectedChapter, triggerChapterCompletion]);
+  }, [readingGoal?.enabled, activeTab, verseModeActive, versesLoading, chapterVerses, selectedBook, selectedChapter, triggerChapterCompletion]);
 
-  // Automated reading monitoring for Catholic Classics Book reader: triggers when user scrolls to bottom of chapter
+  // Automated reading monitoring for Catholic Classics Book reader: triggers when user scrolls to bottom of chapter.
+  // Same enabled gate as the Bible effect above.
   useEffect(() => {
-    if (subView !== 'bookReader' || !activeBook || bookChapterLoading || !bookChapterText) return;
+    if (!readingGoal?.enabled || subView !== 'bookReader' || !activeBook || bookChapterLoading || !bookChapterText) return;
 
     bookChapterStartTimeRef.current = Date.now();
     const sentinel = bookSentinelRef.current;
@@ -2832,12 +2840,11 @@ export default function App() {
       observer.disconnect();
       if (dwellTimeout) clearTimeout(dwellTimeout);
     };
-  }, [subView, activeBook, activeBookChapter, bookChapterLoading, bookChapterText, triggerChapterCompletion]);
+  }, [readingGoal?.enabled, subView, activeBook, activeBookChapter, bookChapterLoading, bookChapterText, triggerChapterCompletion]);
 
   // Computed Reading Progress metrics
   const todayDateStr = new Date().toISOString().slice(0, 10);
   const readingStreakCount = api.computeReadingStreak(readingLogs);
-  const readingWeekCalendar = api.computeReadingWeekCalendar(readingLogs);
   const todayReadingProgress = api.getTodayReadingProgress(readingLogs, readingGoal?.daily_target_chapters || 2);
   const isCurrentBibleChapterCompleted = readingLogs.some(
     l => l.content_type === 'bible' && l.content_id === selectedBook?.id && l.chapter === Number(selectedChapter) && l.completed_on === todayDateStr
@@ -5234,26 +5241,33 @@ export default function App() {
                     <p className="reading-text" style={{ whiteSpace: 'pre-line', lineHeight: 1.7, fontSize: '14.5px' }}>{bookChapterText}</p>
                   )}
 
-                  {/* Chapter Auto-Completion Sentinel & Inline Status Badge */}
+                  {/* Chapter Auto-Completion Sentinel & Inline Status Badge --
+                      the badge only shows once goal tracking is on; the
+                      sentinel div stays mounted either way (harmless, and a
+                      stable ref target), but the observer effect itself
+                      already no-ops while disabled, so nothing is tracked
+                      or logged when this badge is hidden. */}
                   <div ref={bookSentinelRef} style={{ height: '1px', margin: '10px 0' }} />
-                  <div className={`chapter-completion-badge ${isCurrentBookChapterCompleted ? 'completed' : ''}`}>
-                    <div className="chapter-completion-info">
-                      <span className="chapter-completion-status-icon">
-                        <Icons.Check />
-                      </span>
-                      <span>
-                        {isCurrentBookChapterCompleted
-                          ? `Chapter ${activeBookChapter} completed today`
-                          : `Reading Chapter ${activeBookChapter}`}
-                      </span>
+                  {readingGoal?.enabled && (
+                    <div className={`chapter-completion-badge ${isCurrentBookChapterCompleted ? 'completed' : ''}`}>
+                      <div className="chapter-completion-info">
+                        <span className="chapter-completion-status-icon">
+                          <Icons.Check />
+                        </span>
+                        <span>
+                          {isCurrentBookChapterCompleted
+                            ? `Chapter ${activeBookChapter} completed today`
+                            : `Reading Chapter ${activeBookChapter}`}
+                        </span>
+                      </div>
+                      <button
+                        className={`chapter-completion-toggle-btn ${isCurrentBookChapterCompleted ? 'active' : ''}`}
+                        onClick={() => toggleChapterCompletion('book', activeBook.id, activeBookChapter)}
+                      >
+                        {isCurrentBookChapterCompleted ? 'Completed ✓' : 'Mark as Read'}
+                      </button>
                     </div>
-                    <button
-                      className={`chapter-completion-toggle-btn ${isCurrentBookChapterCompleted ? 'active' : ''}`}
-                      onClick={() => toggleChapterCompletion('book', activeBook.id, activeBookChapter)}
-                    >
-                      {isCurrentBookChapterCompleted ? 'Completed ✓' : 'Mark as Read'}
-                    </button>
-                  </div>
+                  )}
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginTop: '24px' }}>
                     <button
@@ -5619,73 +5633,31 @@ export default function App() {
                     <span className="composer-trigger-plus"><Icons.Plus /></span>
                   </button>
 
-                  {/* Daily Scripture & Reading Goal Tracker */}
-                  <div className="reading-goal-card">
-                    <div className="reading-goal-header">
-                      <div className="reading-goal-title-wrap">
-                        <Icons.BookOpen />
-                        <span className="reading-goal-title">Daily Reading Goal</span>
-                      </div>
-                      <button className="reading-goal-edit-btn" onClick={openReadingGoalModal}>
-                        <Icons.Adjust /> Edit Goal
-                      </button>
-                    </div>
-
-                    <div className="reading-goal-main">
-                      <div className="reading-goal-stat">
-                        <div className="reading-goal-numbers">
-                          <span className="reading-goal-current">{todayReadingProgress.count}</span>
-                          <span className="reading-goal-target">/ {todayReadingProgress.target} chapters</span>
+                  {/* Continue Reading — points at whichever of the Bible or
+                      Catholic Classics reading_progress last recorded, across
+                      both features (see resumeReading). Absent entirely for
+                      someone who's never read anything yet, rather than
+                      showing an empty/placeholder card. Deliberately just
+                      this, not the daily-goal tracker that briefly lived here
+                      -- goal tracking is opt-in (see the Bible tab) and has
+                      no business appearing on Home for someone who never
+                      turned it on. */}
+                  {latestReadingProgress && (() => {
+                    const isBible = latestReadingProgress.content_type === 'bible';
+                    const label = isBible
+                      ? BIBLE_BOOKS.find(b => b.id === latestReadingProgress.content_id)?.name
+                      : BOOKS_LIBRARY.find(b => b.id === latestReadingProgress.content_id)?.title;
+                    if (!label) return null;
+                    return (
+                      <div className="card" style={{ marginBottom: '16px', background: 'linear-gradient(135deg, rgba(30,58,138,0.1), rgba(212,175,55,0.05))', border: '1px solid rgba(var(--secondary-rgb), 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={resumeReading}>
+                        <div>
+                          <h4 style={{ color: 'var(--primary)', fontSize: '14px' }}>Continue Reading</h4>
+                          <p style={{ fontSize: '11px', marginTop: '2px' }}>{label} · Chapter {latestReadingProgress.chapter}</p>
                         </div>
-                        <span className="reading-goal-subtext">
-                          {todayReadingProgress.isGoalMet 
-                            ? 'Daily goal achieved today! 🎉' 
-                            : `${todayReadingProgress.remaining} more chapter${todayReadingProgress.remaining > 1 ? 's' : ''} to reach today's goal`}
-                        </span>
+                        <span style={{ color: 'var(--secondary)', display: 'flex' }}><Icons.ChevronRight /></span>
                       </div>
-                      <div className="reading-goal-streak-badge">
-                        <span className="reading-goal-streak-flame"><Icons.Flame /></span>
-                        <span className="reading-goal-streak-count">{readingStreakCount} {readingStreakCount === 1 ? 'Day' : 'Days'}</span>
-                      </div>
-                    </div>
-
-                    <div className="reading-goal-progress-bar">
-                      <div
-                        className={`reading-goal-progress-fill ${todayReadingProgress.isGoalMet ? 'completed' : ''}`}
-                        style={{ width: `${todayReadingProgress.percent}%` }}
-                      />
-                    </div>
-
-                    <div className="reading-goal-calendar-wrap">
-                      <div className="reading-goal-week">
-                        {readingWeekCalendar.map(day => (
-                          <div
-                            key={day.dateStr}
-                            className={`reading-goal-day-dot ${day.completed ? 'completed' : ''} ${day.isToday ? 'is-today' : ''}`}
-                            title={`${day.dateStr}${day.completed ? ' (Goal Met)' : ''}`}
-                          >
-                            {day.label}
-                          </div>
-                        ))}
-                      </div>
-
-                      {latestReadingProgress ? (() => {
-                        const isBible = latestReadingProgress.content_type === 'bible';
-                        const label = isBible
-                          ? BIBLE_BOOKS.find(b => b.id === latestReadingProgress.content_id)?.name
-                          : BOOKS_LIBRARY.find(b => b.id === latestReadingProgress.content_id)?.title;
-                        return (
-                          <button className="reading-goal-action-btn" onClick={resumeReading}>
-                            Continue: {label} {latestReadingProgress.chapter} <Icons.ChevronRight />
-                          </button>
-                        );
-                      })() : (
-                        <button className="reading-goal-action-btn" onClick={() => { setActiveTab('bible'); setSubView(null); }}>
-                          Start Reading <Icons.ChevronRight />
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                    );
+                  })()}
 
                   {/* Saints Quick Discover Banner — the Saints library otherwise
                       has no obvious entry point from Home, where most people land. */}
@@ -5774,21 +5746,37 @@ export default function App() {
                       </div>
                     </div>
                   )}
-                  {/* Bible Screen Quick Goal Progress Bar */}
-                  <div className="bible-goal-quick-bar" onClick={openReadingGoalModal}>
-                    <div className="bible-goal-quick-left">
-                      <span className="bible-goal-quick-icon"><Icons.Target /></span>
-                      <div className="bible-goal-quick-text">
-                        <span className="bible-goal-quick-title">Daily Reading: {todayReadingProgress.count} of {todayReadingProgress.target} Chapters</span>
-                        <span className="bible-goal-quick-sub">
-                          {todayReadingProgress.isGoalMet ? 'Goal reached today ✨ Praise God!' : `${todayReadingProgress.remaining} chapter${todayReadingProgress.remaining > 1 ? 's' : ''} left to reach goal`}
-                        </span>
+                  {/* Bible Screen Quick Goal Progress Bar -- opt-in: shows
+                      real progress only once readingGoal.enabled is true.
+                      Otherwise a plain, low-key entry point, not a bar
+                      quietly implying tracking is already running. */}
+                  {readingGoal?.enabled ? (
+                    <div className="bible-goal-quick-bar" onClick={openReadingGoalModal}>
+                      <div className="bible-goal-quick-left">
+                        <span className="bible-goal-quick-icon"><Icons.Target /></span>
+                        <div className="bible-goal-quick-text">
+                          <span className="bible-goal-quick-title">Daily Reading: {todayReadingProgress.count} of {todayReadingProgress.target} Chapters</span>
+                          <span className="bible-goal-quick-sub">
+                            {todayReadingProgress.isGoalMet ? 'Goal reached today ✨ Praise God!' : `${todayReadingProgress.remaining} chapter${todayReadingProgress.remaining > 1 ? 's' : ''} left to reach goal`}
+                          </span>
+                        </div>
                       </div>
+                      <span className="reading-goal-edit-btn">
+                        <Icons.Adjust /> {readingStreakCount > 0 ? `🔥 ${readingStreakCount}d streak` : 'Edit'}
+                      </span>
                     </div>
-                    <span className="reading-goal-edit-btn">
-                      <Icons.Adjust /> {readingStreakCount > 0 ? `🔥 ${readingStreakCount}d streak` : 'Set Goal'}
-                    </span>
-                  </div>
+                  ) : (
+                    <div className="bible-goal-quick-bar" onClick={openReadingGoalModal}>
+                      <div className="bible-goal-quick-left">
+                        <span className="bible-goal-quick-icon"><Icons.Target /></span>
+                        <div className="bible-goal-quick-text">
+                          <span className="bible-goal-quick-title">Set a daily reading goal</span>
+                          <span className="bible-goal-quick-sub">Track chapters and build a streak -- off by default</span>
+                        </div>
+                      </div>
+                      <span className="reading-goal-edit-btn"><Icons.ChevronRight /></span>
+                    </div>
+                  )}
 
                   {/* Catholic Classics Quick Discover Banner -- same pattern as
                       Home's Discover the Saints banner: a feature with no other
@@ -5882,26 +5870,28 @@ export default function App() {
                         })}
                       </div>
 
-                      {/* Chapter Auto-Completion Sentinel & Inline Status Badge */}
+                      {/* Chapter Auto-Completion Sentinel & Inline Status Badge -- same enabled gate as the book reader's, above. */}
                       <div ref={bibleSentinelRef} style={{ height: '1px', margin: '8px 0' }} />
-                      <div className={`chapter-completion-badge ${isCurrentBibleChapterCompleted ? 'completed' : ''}`}>
-                        <div className="chapter-completion-info">
-                          <span className="chapter-completion-status-icon">
-                            <Icons.Check />
-                          </span>
-                          <span>
-                            {isCurrentBibleChapterCompleted
-                              ? `${selectedBook.name} ${selectedChapter} completed today`
-                              : `Reading ${selectedBook.name} ${selectedChapter}`}
-                          </span>
+                      {readingGoal?.enabled && (
+                        <div className={`chapter-completion-badge ${isCurrentBibleChapterCompleted ? 'completed' : ''}`}>
+                          <div className="chapter-completion-info">
+                            <span className="chapter-completion-status-icon">
+                              <Icons.Check />
+                            </span>
+                            <span>
+                              {isCurrentBibleChapterCompleted
+                                ? `${selectedBook.name} ${selectedChapter} completed today`
+                                : `Reading ${selectedBook.name} ${selectedChapter}`}
+                            </span>
+                          </div>
+                          <button
+                            className={`chapter-completion-toggle-btn ${isCurrentBibleChapterCompleted ? 'active' : ''}`}
+                            onClick={() => toggleChapterCompletion('bible', selectedBook.id, selectedChapter)}
+                          >
+                            {isCurrentBibleChapterCompleted ? 'Completed ✓' : 'Mark as Read'}
+                          </button>
                         </div>
-                        <button
-                          className={`chapter-completion-toggle-btn ${isCurrentBibleChapterCompleted ? 'active' : ''}`}
-                          onClick={() => toggleChapterCompletion('bible', selectedBook.id, selectedChapter)}
-                        >
-                          {isCurrentBibleChapterCompleted ? 'Completed ✓' : 'Mark as Read'}
-                        </button>
-                      </div>
+                      )}
 
                       {/* Chapter Pagination */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
@@ -6537,6 +6527,19 @@ export default function App() {
               </div>
               <div className="reading-goal-modal-body">
                 <div className="goal-option-section">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label style={{ marginBottom: 0 }}>Track My Daily Reading</label>
+                    <label className="switch">
+                      <input type="checkbox" checked={goalInputEnabled} onChange={() => setGoalInputEnabled(v => !v)} />
+                      <span className="slider"></span>
+                    </label>
+                  </div>
+                  <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    Off by default. When on, finishing a chapter counts toward the target below and builds a streak.
+                  </p>
+                </div>
+
+                <div className="goal-option-section" style={{ opacity: goalInputEnabled ? 1 : 0.45, pointerEvents: goalInputEnabled ? 'auto' : 'none' }}>
                   <label>Daily Chapter Target</label>
                   <div className="goal-chapter-chips">
                     {[1, 2, 3, 5].map(num => (
@@ -6552,7 +6555,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="goal-option-section">
+                <div className="goal-option-section" style={{ opacity: goalInputEnabled ? 1 : 0.45, pointerEvents: goalInputEnabled ? 'auto' : 'none' }}>
                   <label>Reading Focus</label>
                   <div className="goal-scope-selector">
                     {[
@@ -6593,7 +6596,7 @@ export default function App() {
                 </button>
                 <button
                   className="auth-btn"
-                  onClick={() => handleSaveReadingGoal({ daily_target_chapters: goalInputChapters, focus_scope: goalInputScope })}
+                  onClick={() => handleSaveReadingGoal({ daily_target_chapters: goalInputChapters, focus_scope: goalInputScope, enabled: goalInputEnabled })}
                 >
                   Save Goal
                 </button>
