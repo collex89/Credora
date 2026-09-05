@@ -676,11 +676,6 @@ export default function App() {
   const [goalInputEnabled, setGoalInputEnabled] = useState(false);
   const [readingCelebrationToast, setReadingCelebrationToast] = useState(null);
 
-  // Sentinel refs & timers for automatic chapter completion tracking
-  const bibleSentinelRef = useRef(null);
-  const bookSentinelRef = useRef(null);
-  const bibleChapterStartTimeRef = useRef(Date.now());
-  const bookChapterStartTimeRef = useRef(Date.now());
   const toastTimerRef = useRef(null);
 
   // Prayers Dashboard States — streak/calendar are computed from real
@@ -2774,83 +2769,16 @@ export default function App() {
     );
   };
 
-  // Automated reading monitoring for Bible reader: triggers when user scrolls to bottom of chapter and has spent reading time.
-  // Gated on readingGoal.enabled -- someone who's never turned goal
-  // tracking on shouldn't have chapters silently logged and a
-  // celebration toast fired without ever having asked for either.
-  useEffect(() => {
-    if (!readingGoal?.enabled || activeTab !== 'bible' || !verseModeActive || versesLoading || chapterVerses.length === 0 || !selectedBook) return;
-
-    bibleChapterStartTimeRef.current = Date.now();
-    const sentinel = bibleSentinelRef.current;
-    if (!sentinel) return;
-
-    let dwellTimeout = null;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry && entry.isIntersecting) {
-          const elapsed = (Date.now() - bibleChapterStartTimeRef.current) / 1000;
-          const minDwell = Math.min(6, Math.max(3, chapterVerses.length * 0.1));
-          if (elapsed >= minDwell) {
-            triggerChapterCompletion('bible', selectedBook.id, selectedChapter);
-          } else {
-            const waitMs = Math.ceil((minDwell - elapsed) * 1000);
-            dwellTimeout = setTimeout(() => {
-              triggerChapterCompletion('bible', selectedBook.id, selectedChapter);
-            }, waitMs);
-          }
-        } else if (dwellTimeout) {
-          clearTimeout(dwellTimeout);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(sentinel);
-    return () => {
-      observer.disconnect();
-      if (dwellTimeout) clearTimeout(dwellTimeout);
-    };
-  }, [readingGoal?.enabled, activeTab, verseModeActive, versesLoading, chapterVerses, selectedBook, selectedChapter, triggerChapterCompletion]);
-
-  // Automated reading monitoring for Catholic Classics Book reader: triggers when user scrolls to bottom of chapter.
-  // Same enabled gate as the Bible effect above.
-  useEffect(() => {
-    if (!readingGoal?.enabled || subView !== 'bookReader' || !activeBook || bookChapterLoading || !bookChapterText) return;
-
-    bookChapterStartTimeRef.current = Date.now();
-    const sentinel = bookSentinelRef.current;
-    if (!sentinel) return;
-
-    let dwellTimeout = null;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry && entry.isIntersecting) {
-          const elapsed = (Date.now() - bookChapterStartTimeRef.current) / 1000;
-          const minDwell = 5;
-          if (elapsed >= minDwell) {
-            triggerChapterCompletion('book', activeBook.id, activeBookChapter);
-          } else {
-            const waitMs = Math.ceil((minDwell - elapsed) * 1000);
-            dwellTimeout = setTimeout(() => {
-              triggerChapterCompletion('book', activeBook.id, activeBookChapter);
-            }, waitMs);
-          }
-        } else if (dwellTimeout) {
-          clearTimeout(dwellTimeout);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(sentinel);
-    return () => {
-      observer.disconnect();
-      if (dwellTimeout) clearTimeout(dwellTimeout);
-    };
-  }, [readingGoal?.enabled, subView, activeBook, activeBookChapter, bookChapterLoading, bookChapterText, triggerChapterCompletion]);
+  // Automatic scroll-to-bottom-plus-dwell-timer completion detection used
+  // to live here for both readers. Removed: it's trivially satisfied by
+  // fast-scrolling past without reading, and the book reader used a flat
+  // 5-second dwell regardless of whether the chapter was a page or fifty
+  // -- a timer is a proxy for "read it," not the thing itself. "Mark as
+  // Read" (triggerChapterCompletion/toggleChapterCompletion, both still
+  // above) is now the only way a chapter counts, which is an honest,
+  // deliberate signal rather than an inferred one -- fitting for a
+  // feature about real spiritual reading, not passive scrolling, and
+  // consistent with the rest of this feature already being opt-in.
 
   // Computed Reading Progress metrics
   const todayDateStr = new Date().toISOString().slice(0, 10);
@@ -5251,13 +5179,9 @@ export default function App() {
                     <p className="reading-text" style={{ whiteSpace: 'pre-line', lineHeight: 1.7, fontSize: '14.5px' }}>{bookChapterText}</p>
                   )}
 
-                  {/* Chapter Auto-Completion Sentinel & Inline Status Badge --
-                      the badge only shows once goal tracking is on; the
-                      sentinel div stays mounted either way (harmless, and a
-                      stable ref target), but the observer effect itself
-                      already no-ops while disabled, so nothing is tracked
-                      or logged when this badge is hidden. */}
-                  <div ref={bookSentinelRef} style={{ height: '1px', margin: '10px 0' }} />
+                  {/* Chapter completion badge -- shows only once goal
+                      tracking is on. "Mark as Read" is the only way this
+                      turns green now; no more auto-detection sentinel. */}
                   {readingGoal?.enabled && (
                     <div className={`chapter-completion-badge ${isCurrentBookChapterCompleted ? 'completed' : ''}`}>
                       <div className="chapter-completion-info">
@@ -5880,8 +5804,7 @@ export default function App() {
                         })}
                       </div>
 
-                      {/* Chapter Auto-Completion Sentinel & Inline Status Badge -- same enabled gate as the book reader's, above. */}
-                      <div ref={bibleSentinelRef} style={{ height: '1px', margin: '8px 0' }} />
+                      {/* Chapter completion badge -- same as the book reader's, above. */}
                       {readingGoal?.enabled && (
                         <div className={`chapter-completion-badge ${isCurrentBibleChapterCompleted ? 'completed' : ''}`}>
                           <div className="chapter-completion-info">
