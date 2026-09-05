@@ -869,30 +869,27 @@ export const DEFAULT_READING_GOAL = {
   enabled: false
 };
 
+// Supabase is the only store here, same as fetchBibleHighlights/
+// fetchBibleBookmarks above -- signed-out/demo mode gets an empty/default
+// result with no persistence, rather than the localStorage mirror this
+// used to keep and merge on every fetch. That merge (by a synthetic
+// content_type:content_id:chapter:completed_on key, written back to
+// localStorage on every read) was real complexity nothing else in this
+// file has, and it's exactly the kind of thing that can quietly diverge
+// between two devices -- one's local cache resurrecting a log the other
+// device's Supabase state no longer has, say. A network hiccup on load
+// now just returns the same empty/default result every other per-user
+// fetch in this file already falls back to, rather than a stale local
+// copy masking the failure.
 export async function fetchReadingGoal(userId) {
-  let localGoal = null;
-  try {
-    const raw = localStorage.getItem('crescamus_reading_goal');
-    if (raw) localGoal = JSON.parse(raw);
-  } catch {}
-
-  if (!userId || !supabase) {
-    return localGoal || DEFAULT_READING_GOAL;
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('reading_goals')
-      .select('daily_target_chapters, focus_scope, target_book_id, enabled')
-      .eq('user_id', userId)
-      .maybeSingle();
-    if (!error && data) {
-      try { localStorage.setItem('crescamus_reading_goal', JSON.stringify(data)); } catch {}
-      return data;
-    }
-  } catch {}
-
-  return localGoal || DEFAULT_READING_GOAL;
+  if (!userId || !supabase) return DEFAULT_READING_GOAL;
+  const { data, error } = await supabase
+    .from('reading_goals')
+    .select('daily_target_chapters, focus_scope, target_book_id, enabled')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error || !data) return DEFAULT_READING_GOAL;
+  return data;
 }
 
 export async function saveReadingGoal(userId, goal) {
@@ -902,101 +899,55 @@ export async function saveReadingGoal(userId, goal) {
     target_book_id: goal.target_book_id || null,
     enabled: !!goal.enabled
   };
-
-  try {
-    localStorage.setItem('crescamus_reading_goal', JSON.stringify(cleanGoal));
-  } catch {}
-
   if (!userId || !supabase) return cleanGoal;
-
-  try {
-    await supabase.from('reading_goals').upsert(
-      {
-        user_id: userId,
-        ...cleanGoal,
-        updated_at: new Date().toISOString()
-      },
-      { onConflict: 'user_id' }
-    );
-  } catch {}
-
+  await supabase.from('reading_goals').upsert(
+    { user_id: userId, ...cleanGoal, updated_at: new Date().toISOString() },
+    { onConflict: 'user_id' }
+  );
   return cleanGoal;
 }
 
 export async function fetchReadingChapterLogs(userId, days = 60) {
+  if (!userId || !supabase) return [];
   const since = new Date();
   since.setDate(since.getDate() - days);
-  const sinceStr = toDateStr(since);
-
-  let localLogs = [];
-  try {
-    const raw = localStorage.getItem('crescamus_reading_chapter_logs');
-    if (raw) localLogs = JSON.parse(raw);
-  } catch {}
-
-  if (!userId || !supabase) {
-    return (localLogs || []).filter(l => l.completed_on >= sinceStr);
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('reading_chapter_logs')
-      .select('content_type, content_id, chapter, completed_on')
-      .eq('user_id', userId)
-      .gte('completed_on', sinceStr)
-      .order('completed_on', { ascending: false });
-
-    if (!error && data) {
-      const keyMap = new Map();
-      [...data, ...localLogs].forEach(item => {
-        const k = `${item.content_type}:${item.content_id}:${item.chapter}:${item.completed_on}`;
-        if (!keyMap.has(k)) keyMap.set(k, item);
-      });
-      const merged = Array.from(keyMap.values());
-      try { localStorage.setItem('crescamus_reading_chapter_logs', JSON.stringify(merged)); } catch {}
-      return merged.filter(l => l.completed_on >= sinceStr);
-    }
-  } catch {}
-
-  return (localLogs || []).filter(l => l.completed_on >= sinceStr);
+  const { data, error } = await supabase
+    .from('reading_chapter_logs')
+    .select('content_type, content_id, chapter, completed_on')
+    .eq('user_id', userId)
+    .gte('completed_on', toDateStr(since))
+    .order('completed_on', { ascending: false });
+  if (error) return [];
+  return data || [];
 }
 
 export async function logReadingChapterCompletion(userId, contentType, contentId, chapter, dateStr = toDateStr(new Date())) {
-  const newLog = {
-    content_type: contentType,
-    content_id: contentId,
-    chapter: Number(chapter),
-    completed_on: dateStr
-  };
-
-  try {
-    const raw = localStorage.getItem('crescamus_reading_chapter_logs');
-    const existing = raw ? JSON.parse(raw) : [];
-    const exists = existing.some(
-      l => l.content_type === contentType && l.content_id === contentId && l.chapter === Number(chapter) && l.completed_on === dateStr
-    );
-    if (!exists) {
-      existing.unshift(newLog);
-      localStorage.setItem('crescamus_reading_chapter_logs', JSON.stringify(existing.slice(0, 500)));
-    }
-  } catch {}
-
+  const newLog = { content_type: contentType, content_id: contentId, chapter: Number(chapter), completed_on: dateStr };
   if (userId && supabase) {
     try {
       await supabase.from('reading_chapter_logs').upsert(
-        {
-          user_id: userId,
-          content_type: contentType,
-          content_id: contentId,
-          chapter: Number(chapter),
-          completed_on: dateStr
-        },
+        { user_id: userId, ...newLog },
         { onConflict: 'user_id,content_type,content_id,chapter,completed_on' }
       );
     } catch {}
   }
-
   return newLog;
+}
+
+// Un-marking a chapter as read (toggleChapterCompletion's "already
+// completed" branch, in App.jsx) used to only touch local state and
+// localStorage -- the row stayed in reading_chapter_logs in Supabase, so
+// after a reload or a different device it would silently reappear. This
+// is the delete side logReadingChapterCompletion's upsert was missing.
+export async function deleteReadingChapterLog(userId, contentType, contentId, chapter, dateStr) {
+  if (!userId || !supabase) return;
+  await supabase.from('reading_chapter_logs').delete().match({
+    user_id: userId,
+    content_type: contentType,
+    content_id: contentId,
+    chapter: Number(chapter),
+    completed_on: dateStr
+  });
 }
 
 export function computeReadingStreak(logs) {

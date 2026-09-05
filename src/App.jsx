@@ -660,27 +660,16 @@ export default function App() {
   }); // see BIBLE_VERSIONS
   const [versionPickerOpen, setVersionPickerOpen] = useState(false);
 
-  // Reading Goals & Automated Progress Monitoring
+  // Reading Goals & Automated Progress Monitoring. Plain in-memory state,
+  // same as bibleHighlights/bibleBookmarks below -- Supabase (fetched into
+  // this state on session load, see the big Promise.all further down) is
+  // the only store; no localStorage mirror to keep in sync with it.
   // enabled defaults false: goal tracking (and the automatic chapter
   // logging tied to it, below) only ever runs once someone explicitly
   // turns it on in the goal modal -- not implicitly just because a saved
   // target exists (see migration 026).
-  const [readingGoal, setReadingGoal] = useState(() => {
-    try {
-      const raw = localStorage.getItem('crescamus_reading_goal');
-      return raw ? JSON.parse(raw) : { daily_target_chapters: 2, focus_scope: 'all', target_book_id: null, enabled: false };
-    } catch {
-      return { daily_target_chapters: 2, focus_scope: 'all', target_book_id: null, enabled: false };
-    }
-  });
-  const [readingLogs, setReadingLogs] = useState(() => {
-    try {
-      const raw = localStorage.getItem('crescamus_reading_chapter_logs');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [readingGoal, setReadingGoal] = useState(api.DEFAULT_READING_GOAL);
+  const [readingLogs, setReadingLogs] = useState([]);
   const [showReadingGoalModal, setShowReadingGoalModal] = useState(false);
   const [goalInputChapters, setGoalInputChapters] = useState(2);
   const [goalInputScope, setGoalInputScope] = useState('all');
@@ -2763,7 +2752,13 @@ export default function App() {
         l => !(l.content_type === contentType && l.content_id === contentId && l.chapter === chapterInt && l.completed_on === currentTodayStr)
       );
       setReadingLogs(updated);
-      try { localStorage.setItem('crescamus_reading_chapter_logs', JSON.stringify(updated)); } catch {}
+      // Previously only touched local state (and, before this cleanup,
+      // localStorage) -- the row stayed in Supabase, so un-marking looked
+      // right until the next reload or a different device, when it would
+      // silently reappear. See deleteReadingChapterLog in api.js.
+      if (session?.user?.id) {
+        api.deleteReadingChapterLog(session.user.id, contentType, contentId, chapterInt, currentTodayStr).catch(() => {});
+      }
     } else {
       triggerChapterCompletion(contentType, contentId, chapterInt);
     }
