@@ -16,6 +16,15 @@ import { downloadPostImage } from './lib/postImage';
 // faith-relevant symbols, not the full unicode emoji set.
 const MAX_COMPOSER_VIDEO_BYTES = 50 * 1024 * 1024; // 50MB — generous for a short clip, cheap to fail fast on client rather than mid-upload
 const POST_MAX_LENGTH = 2000; // matches the posts.text check constraint (schema.sql) — shown live so a long post is never silently rejected at submit time
+const POST_EDIT_WINDOW_MS = 3 * 60 * 60 * 1000; // matches the RLS policy in migration 027 -- hiding "Edit Post" here is UX, not the actual enforcement, which happens at the database regardless of what this client does
+
+// Whether *this device* still thinks the edit window is open. The real
+// gate is the RLS policy (migration 027, created_at > now() - 3h) --
+// Supabase rejects the update either way, since the anon key is public
+// and nothing stops a request bypassing this UI entirely. This only
+// decides whether to show "Edit Post" at all, so someone doesn't tap it,
+// write out an edit, and have it silently rejected a moment later.
+const canEditPost = (post) => (Date.now() - new Date(post.createdAt).getTime()) < POST_EDIT_WINDOW_MS;
 
 const getPostIdFromHash = () => {
   const match = window.location.hash.match(/^#post=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
@@ -1978,9 +1987,15 @@ export default function App() {
                         <Icons.Pin fill={post.isPinned} /> {post.isPinned ? 'Unpin from Profile' : 'Pin to Profile'}
                       </button>
                     )}
-                    <button className="post-menu-item" onClick={() => openEditPost(post)}>
-                      <Icons.Edit /> Edit Post
-                    </button>
+                    {canEditPost(post) ? (
+                      <button className="post-menu-item" onClick={() => openEditPost(post)}>
+                        <Icons.Edit /> Edit Post
+                      </button>
+                    ) : (
+                      <div className="post-menu-item disabled" title="Posts can only be edited within 3 hours of posting">
+                        <Icons.Edit /> Edit Post
+                      </div>
+                    )}
                     <button className="post-menu-item danger" onClick={() => handleDeletePost(post.originalPostId)}>
                       <Icons.Trash /> Delete Post
                     </button>
@@ -2283,6 +2298,17 @@ export default function App() {
     if (!editingPost) return;
     const text = editPostText.trim();
     if (!text || editPostText.length > POST_MAX_LENGTH) return;
+    // Re-checked here, not just when the menu opened: someone who opens
+    // the editor seconds before the 3-hour mark and takes a while writing
+    // could otherwise cross it mid-edit. The database would reject the
+    // update either way (see migration 027), but silently -- this at
+    // least tells them why, rather than "Save" doing nothing.
+    if (!canEditPost(editingPost)) {
+      alert("The 3-hour edit window for this post has passed.");
+      setEditingPost(null);
+      setEditPostText('');
+      return;
+    }
     const originalId = editingPost.originalPostId;
 
     setEditPostSaving(true);
@@ -4804,9 +4830,15 @@ export default function App() {
                                   </button>
                                 ) : detailPost.user.username === myUsername ? (
                                   <>
-                                    <button className="post-menu-item" onClick={() => { openEditPost(detailPost); setPostMenuOpen(null); }}>
-                                      <Icons.Edit /> Edit Post
-                                    </button>
+                                    {canEditPost(detailPost) ? (
+                                      <button className="post-menu-item" onClick={() => { openEditPost(detailPost); setPostMenuOpen(null); }}>
+                                        <Icons.Edit /> Edit Post
+                                      </button>
+                                    ) : (
+                                      <div className="post-menu-item disabled" title="Posts can only be edited within 3 hours of posting">
+                                        <Icons.Edit /> Edit Post
+                                      </div>
+                                    )}
                                     <button className="post-menu-item danger" onClick={() => { handleDeletePost(detailPost.originalPostId); setActivePostId(null); setPostMenuOpen(null); }}>
                                       <Icons.Trash /> Delete Post
                                     </button>
