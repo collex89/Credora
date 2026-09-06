@@ -32,6 +32,46 @@ const LITURGICAL: Record<string, { title: string; body: string }> = {
   evening: { title: "Evening Examen", body: "Time for your evening examination of conscience." },
 };
 
+// Continue Reading -- unlike everything above, this isn't opt-in or
+// user-configurable: it fires for every profile at these two fixed local
+// times, every day. Personalized from reading_progress (migration 024),
+// whichever book or Bible book they most recently opened; a generic nudge
+// for anyone who's never read anything yet. Deno can't import frontend
+// source, so the id -> display name lookups are duplicated here from
+// src/data/mockData.js (BIBLE_BOOKS) and src/lib/books.js (BOOKS_LIBRARY)
+// -- both small, stable lists; keep in sync if either changes.
+const CONTINUE_READING_TIMES = ["09:00", "18:00"];
+
+const BIBLE_BOOK_NAMES: Record<string, string> = {
+  "gen": "Genesis", "exo": "Exodus", "lev": "Leviticus", "num": "Numbers", "deu": "Deuteronomy",
+  "jos": "Joshua", "jud": "Judges", "rut": "Ruth", "1sam": "1 Samuel", "2sam": "2 Samuel",
+  "1kin": "1 Kings", "2kin": "2 Kings", "1chr": "1 Chronicles", "2chr": "2 Chronicles", "ezr": "Ezra",
+  "neh": "Nehemiah", "tob": "Tobit", "jdt": "Judith", "est": "Esther", "1mac": "1 Maccabees",
+  "2mac": "2 Maccabees", "job": "Job", "psa": "Psalms", "pro": "Proverbs", "ecc": "Ecclesiastes",
+  "sg": "Song of Songs", "wis": "Wisdom", "sir": "Sirach", "isa": "Isaiah", "jer": "Jeremiah",
+  "lam": "Lamentations", "bar": "Baruch", "eze": "Ezekiel", "dan": "Daniel", "hos": "Hosea",
+  "joe": "Joel", "amo": "Amos", "oba": "Obadiah", "jon": "Jonah", "mic": "Micah",
+  "nah": "Nahum", "hab": "Habakkuk", "zep": "Zephaniah", "hag": "Haggai", "zec": "Zechariah",
+  "mal": "Malachi", "mat": "Matthew", "mar": "Mark", "luk": "Luke", "joh": "John",
+  "act": "Acts", "rom": "Romans", "1cor": "1 Corinthians", "2cor": "2 Corinthians", "gal": "Galatians",
+  "eph": "Ephesians", "phi": "Philippians", "col": "Colossians", "1the": "1 Thessalonians", "2the": "2 Thessalonians",
+  "1tim": "1 Timothy", "2tim": "2 Timothy", "tit": "Titus", "phm": "Philemon", "heb": "Hebrews",
+  "jam": "James", "1pet": "1 Peter", "2pet": "2 Peter", "1joh": "1 John", "2joh": "2 John",
+  "3joh": "3 John", "jud_nt": "Jude", "rev": "Revelation",
+};
+
+const CLASSICS_BOOK_NAMES: Record<string, string> = {
+  "imitation-of-christ": "The Imitation of Christ",
+  "confessions": "Confessions",
+  "story-of-a-soul": "Story of a Soul",
+};
+
+function resolveContentName(contentType: string, contentId: string): string | null {
+  if (contentType === "bible") return BIBLE_BOOK_NAMES[contentId] ?? null;
+  if (contentType === "book") return CLASSICS_BOOK_NAMES[contentId] ?? null;
+  return null;
+}
+
 function hhmmInTimezone(timeZone: string | null): string {
   const tz = timeZone || "UTC";
   try {
@@ -92,6 +132,38 @@ Deno.serve(async (req) => {
     const nowHHMM = hhmmInTimezone(timezoneById.get(intention.user_id) ?? null);
     if (intention.reminder_time === nowHHMM) {
       addDue(intention.user_id, "Prayer Intention", intention.text);
+    }
+  }
+
+  // Continue Reading -- every profile, no enabled flag to check, at
+  // either of the two fixed local times above.
+  const continueReadingDue = (profiles || [])
+    .filter((p) => CONTINUE_READING_TIMES.includes(hhmmInTimezone(p.timezone)))
+    .map((p) => p.id);
+
+  if (continueReadingDue.length > 0) {
+    const { data: progressRows } = await supabase
+      .from("reading_progress")
+      .select("user_id, content_type, content_id, chapter, updated_at")
+      .in("user_id", continueReadingDue)
+      .order("updated_at", { ascending: false });
+
+    // First row per user, in one query rather than one query per user --
+    // rows are already ordered newest-first, so the first one seen per
+    // user_id is that user's most recent reading_progress.
+    const latestByUser = new Map<string, { content_type: string; content_id: string; chapter: number }>();
+    for (const row of progressRows || []) {
+      if (!latestByUser.has(row.user_id)) latestByUser.set(row.user_id, row);
+    }
+
+    for (const userId of continueReadingDue) {
+      const progress = latestByUser.get(userId);
+      const name = progress ? resolveContentName(progress.content_type, progress.content_id) : null;
+      if (progress && name) {
+        addDue(userId, "Continue Reading", `${name}, Chapter ${progress.chapter} is waiting for you.`);
+      } else {
+        addDue(userId, "Time to Grow in Faith", "Take a few minutes today for Scripture or a spiritual classic.");
+      }
     }
   }
 
