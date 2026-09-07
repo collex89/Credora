@@ -1,18 +1,24 @@
-// One-time build script: parses three public-domain Catholic spiritual
-// classics from Project Gutenberg plain-text editions into one JSON file
-// per chapter, the same lazy-per-chapter approach already used for the
-// Bible (see scripts/parse-bible.mjs) so the reader only ever downloads
-// the chapter actually being read.
+// One-time build script: parses public-domain Catholic spiritual classics
+// into one JSON file per chapter, the same lazy-per-chapter approach
+// already used for the Bible (see scripts/parse-bible.mjs) so the reader
+// only ever downloads the chapter actually being read.
 //
-// All three confirmed "Public domain in the USA" directly on their
-// Project Gutenberg listing pages before downloading anything:
+// Each confirmed public domain directly on its source listing page before
+// downloading anything. Four are Project Gutenberg plain-text editions;
+// Introduction to the Devout Life isn't on Gutenberg, so it's sourced from
+// CCEL (Christian Classics Ethereal Library), which only hosts public
+// domain or freely-licensed texts -- this is their 19th-century "Library
+// of Spiritual Works for English Catholics" translation, long out of
+// copyright, not a modern licensed edition:
 //   The Imitation of Christ       -- gutenberg.org/ebooks/1653  (Benham translation)
 //   The Confessions of St. Augustine -- gutenberg.org/ebooks/3296  (Pusey translation)
 //   Story of a Soul (St. Thérèse) -- gutenberg.org/ebooks/16772 (Taylor translation)
+//   Introduction to the Devout Life -- ccel.org/ccel/desales/devout_life (Library of Spiritual Works for English Catholics translation)
+//   Abandonment to Divine Providence -- gutenberg.org/ebooks/52057 (McMahon translation)
 //
 // Each book has a different heading convention (CHAPTER I / BOOK I) and a
 // different inline footnote-marker style, so each gets its own small
-// config rather than one regex trying to cover all three.
+// config rather than one regex trying to cover all of them.
 //
 // Run with: node scripts/parse-catholic-books.mjs
 // Source dir: scripts/src_tmp/books/ (gitignored, not committed --
@@ -36,6 +42,12 @@ function extractBody(raw, title) {
   return raw.slice(raw.indexOf('\n', startMarker), endMarker);
 }
 
+// CCEL's plain-text export has no Gutenberg START/END banner -- the front
+// matter (title block, table of contents) is harmless to leave in, since
+// it's dropped anyway: chapter splitting only keeps text between one
+// chapter marker and the next, so anything before the first marker is
+// never included.
+
 // Handles the Imitation of Christ's two-part footnote convention: a bare
 // "(1)" inline in the body is just a reference pointer with no text of its
 // own, while the actual citation text for the whole chapter is one
@@ -47,11 +59,13 @@ function extractBody(raw, title) {
 // sentence between one bare marker and the next, since there's no
 // footnote text there to bound the match against. Splitting into
 // paragraphs first and dropping only the ones that are entirely a
-// citation list avoids that trap.
-function stripFootnoteParagraphs(text) {
+// citation list avoids that trap. The marker pattern is passed in since
+// different editions use different bracket styles -- "(1)" here, "[1]"
+// elsewhere.
+function stripFootnoteParagraphs(text, markerPattern) {
   return text
     .split(/\n\n+/)
-    .filter(para => !/^\(\d+\)/.test(para.trim()))
+    .filter(para => !markerPattern.test(para.trim()))
     .join('\n\n');
 }
 
@@ -85,7 +99,7 @@ const BOOKS = [
     // as part of the chapter's own text rather than split into a separate
     // field, matching how saint bios are already stored as one string.
     chapterRegex: /^CHAPTER [IVXLC]+\s*$/gm,
-    stripFootnoteParagraph: true,
+    stripFootnoteParagraph: /^\(\d+\)/,
     // What's left after that is bare inline pointers ("(1)", "(2)") with
     // no text of their own -- safe to remove directly.
     footnoteRegex: /\(\d+\)/g,
@@ -129,6 +143,50 @@ const BOOKS = [
     footnoteRegex: /\[\d+\]/g,
     expectedChapters: 11,
   },
+  {
+    id: 'introduction-devout-life',
+    file: 'introduction_devout_life.txt',
+    title: 'Introduction to the Devout Life',
+    // Not a Gutenberg edition -- CCEL's plain-text export has no
+    // START/END banner to slice on, so skip that step entirely.
+    source: 'ccel',
+    // Same "CHAPTER I. Title on the same line" style as Story of a Soul,
+    // but numbering restarts at I within each of the book's 5 Parts
+    // rather than running continuously -- harmless here, since each
+    // match just becomes the next sequential lazy-loaded chapter file
+    // regardless of what roman numeral it printed.
+    chapterRegex: /^CHAPTER [IVXLC]+\..*$/gm,
+    // Everything from here on is CCEL's own apparatus (a subject index,
+    // a Scripture-reference index, then a huge page-number link list) --
+    // none of it is Francis de Sales' text, and cutting it before
+    // per-chapter splitting keeps the last real chapter from absorbing
+    // it the way Story of a Soul's appendix did.
+    truncateAt: 'INDEX.',
+    // Endnotes ("[212] Ps. cxix. 93.") sit in their own paragraph after a
+    // rule line at the end of a chapter, same shape as Story of a Soul.
+    truncateChapterAtRule: true,
+    footnoteRegex: /\[\d+\]/g,
+    expectedChapters: 119,
+  },
+  {
+    id: 'abandonment-divine-providence',
+    file: 'abandonment_divine_providence.txt',
+    title: 'Abandonment to Divine Providence',
+    // Headings are "_CHAPTER I._" (Gutenberg's plain-text italics markup)
+    // for every chapter except one -- Book Second's Chapter IX is missing
+    // its underscores in this transcription -- so both are matched.
+    chapterRegex: /^_?CHAPTER [IVXLC]+\._?$/gm,
+    // Numbering restarts at I within each of the 3 Books, same non-issue
+    // as Introduction to the Devout Life above.
+    // This edition's Gutenberg transcriber note ("Obvious typographical
+    // errors have been silently corrected...") sits inside the START/END
+    // banner, right after the real text ends -- without cutting it, the
+    // last chapter absorbs it whole.
+    truncateAt: 'Transcriber’s Notes',
+    stripFootnoteParagraph: /^\[\d+\]/,
+    footnoteRegex: /\[\d+\]/g,
+    expectedChapters: 33,
+  },
 ];
 
 let allOk = true;
@@ -147,7 +205,7 @@ for (const book of BOOKS) {
   // Normalizing here, before anything else runs, fixes it for all three
   // books at once rather than patching around CRLF in each regex.
   const raw = readFileSync(srcPath, 'utf8').replace(/\r\n/g, '\n');
-  let body = extractBody(raw, book.title);
+  let body = book.source === 'ccel' ? raw : extractBody(raw, book.title);
   if (book.truncateAt) {
     const cut = body.indexOf(book.truncateAt);
     if (cut === -1) throw new Error(`${book.id}: truncateAt marker "${book.truncateAt}" not found`);
@@ -171,9 +229,11 @@ for (const book of BOOKS) {
     const spanStart = markers[i].index + markers[i][0].length;
     const spanEnd = i + 1 < markers.length ? markers[i + 1].index : body.length;
     let text = body.slice(spanStart, spanEnd);
-    if (book.stripFootnoteParagraph) text = stripFootnoteParagraphs(text);
+    if (book.stripFootnoteParagraph) text = stripFootnoteParagraphs(text, book.stripFootnoteParagraph);
     if (book.truncateChapterAtRule) {
-      const ruleMatch = text.match(/^_{5,}\s*$/m);
+      // CCEL's rule lines are indented a few spaces rather than flush
+      // left like Gutenberg's -- \s* tolerates either.
+      const ruleMatch = text.match(/^\s*_{5,}\s*$/m);
       if (ruleMatch) text = text.slice(0, ruleMatch.index);
     }
     if (book.footnoteRegex) text = text.replace(book.footnoteRegex, '');

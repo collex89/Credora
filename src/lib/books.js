@@ -31,6 +31,24 @@ export const BOOKS_LIBRARY = [
     sourceUrl: 'https://www.gutenberg.org/ebooks/16772',
     license: 'Public domain (Taylor translation)',
   },
+  {
+    id: 'introduction-devout-life',
+    title: 'Introduction to the Devout Life',
+    author: 'St. Francis de Sales',
+    description: 'A 17th-century guide to holiness written for lay people living ordinary lives in the world, not monks or nuns -- one of the most widely read handbooks of practical spirituality in the Church.',
+    totalChapters: 119,
+    sourceUrl: 'https://www.ccel.org/ccel/desales/devout_life',
+    license: 'Public domain (Library of Spiritual Works for English Catholics translation)',
+  },
+  {
+    id: 'abandonment-divine-providence',
+    title: 'Abandonment to Divine Providence',
+    author: 'Jean-Pierre de Caussade',
+    description: 'A meditation on trusting God in the "sacrament of the present moment," compiled after the author\'s death from his letters of spiritual direction -- a cornerstone of French spiritual writing.',
+    totalChapters: 33,
+    sourceUrl: 'https://www.gutenberg.org/ebooks/52057',
+    license: 'Public domain (McMahon translation)',
+  },
 ];
 
 const bookModules = import.meta.glob('../data/books/*/*.json');
