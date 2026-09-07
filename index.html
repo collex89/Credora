@@ -5,7 +5,14 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#1E3A8A" />
+    <!-- Matches the .app-header background (--surface), not the brand blue --
+         a status bar in the brand color left a visible seam against the
+         white/dark header underneath it. Two tags for the initial paint
+         before React mounts (OS-level dark mode); App.jsx updates this
+         live when the user flips the in-app Dark Mode toggle, which is
+         independent of the OS setting. -->
+    <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#131A26" media="(prefers-color-scheme: dark)" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Crescamus" />

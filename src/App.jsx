@@ -904,6 +904,13 @@ export default function App() {
   // still there next time instead of quietly reverting to light.
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    // Keeps the status bar (Android/PWA) matching .app-header's actual
+    // background instead of the OS-level prefers-color-scheme guess in
+    // index.html -- the in-app toggle should win once the user has made
+    // an explicit choice, same as data-theme above.
+    document.querySelectorAll('meta[name="theme-color"]').forEach((el) => {
+      el.setAttribute('content', theme === 'dark' ? '#131A26' : '#FFFFFF');
+    });
     try {
       localStorage.setItem('crescamus-theme', theme);
     } catch {
