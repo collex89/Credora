@@ -4582,11 +4582,11 @@ export default function App() {
 
                     <h4 className="settings-section-title">Notifications</h4>
                     <div className="settings-row" style={{ cursor: 'default', flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                      <span><Icons.Notification /> Prayer Reminders</span>
+                      <span><Icons.Notification /> Notifications</span>
                       {!isNotificationSupported() ? (
                         <span className="input-hint">Not supported in this browser.</span>
                       ) : notificationPermission === 'granted' ? (
-                        <span className="input-ok"><Icons.Check /> Enabled — reminders will fire while Crescamus is open.</span>
+                        <span className="input-ok"><Icons.Check /> Enabled — you'll get these even when Crescamus is closed.</span>
                       ) : notificationPermission === 'denied' ? (
                         <span className="input-error">Blocked — enable notifications for this site in your browser settings.</span>
                       ) : (
@@ -4595,7 +4595,7 @@ export default function App() {
                         </button>
                       )}
                       <span className="input-hint">
-                        Reminders fire while Crescamus is open in your browser. Always-on reminders that work even when the app is closed need the native app version, planned for later.
+                        Get notified when someone likes or comments on your post, your prayer reminders, and a nudge to continue reading — these work even when Crescamus is closed.
                       </span>
                     </div>
 
