@@ -475,10 +475,22 @@ export const SAINTS = [
     image: "/saints/gregory.jpg",
     sourceUrl: "https://en.wikipedia.org/wiki/Pope_Gregory_I",
     imageLicense: "Public domain"
+  },
+  {
+    id: "nativitymary",
+    name: "The Nativity of Mary",
+    category: "Marian Feasts",
+    feastDay: "September 8",
+    patronage: "Mothers, Expectant Mothers, Grandparents",
+    quote: "The most Blessed Virgin Mary, in the first instant of her conception, by a singular grace and privilege granted by almighty God, in view of the merits of Jesus Christ, the savior of the human race, was preserved free from all stain of original sin. -- Pope Pius IX",
+    bio: "The Nativity of the Blessed Virgin Mary, the Nativity of Mary, the Birth of the Virgin Mary, or (Latter) Marymas refers to a Christian feast day celebrating the birth of Mary, mother of Jesus.\nThe modern Biblical canon does not record Mary's birth. The earliest known account of Mary's birth is found in the Gospel of James (5:2), an apocryphal text from the late second century, with her parents known as Saint Anne and Saint Joachim.\nIn the case of saints, the Church commemorates their date of death, with Saint John the Baptist and the Virgin Mary as the few whose birth dates are commemorated. The reason for this is found in the singular mission each had in salvation history, but traditionally also because these alone were holy in their very birth (for Mary, see Immaculate Conception; John was sanctified in Saint Elizabeth's womb according to the traditional interpretation of Luke 1:15).\nDevotion to the innocence of Mary under this Marian title is widely celebrated in many cultures across the globe in various prayers and hymns such as the Novena in Honor of the Nativity of the Blessed Virgin Mary.",
+    image: "/saints/nativitymary.jpg",
+    sourceUrl: "https://en.wikipedia.org/wiki/Nativity_of_Mary",
+    imageLicense: "Public domain"
   }
 ];
 
-export const SAINT_CATEGORIES = ["Martyrs", "Doctors", "Popes", "Virgins", "Missionaries", "Apostles", "Confessors"];
+export const SAINT_CATEGORIES = ["Martyrs", "Doctors", "Popes", "Virgins", "Missionaries", "Apostles", "Confessors", "Marian Feasts"];
 
 // Real, license-verified audio only (see scripts/download-audio.mjs and
 // scripts/audio-manifest.json for provenance). Homilies and Podcasts were

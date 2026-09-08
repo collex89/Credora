@@ -42,7 +42,8 @@ const SAINTS = [
   { id: 'rita', title: 'Rita of Cascia' },
   { id: 'christopher', title: 'Saint Christopher' },
   { id: 'anne', title: 'Saint Anne' },
-  { id: 'johnbaptist', title: 'John the Baptist' }
+  { id: 'johnbaptist', title: 'John the Baptist' },
+  { id: 'nativitymary', title: 'Nativity of Mary' }
 ];
 
 const FREE_LICENSE = /public domain|cc0|cc-by|cc by/i;
