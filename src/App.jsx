@@ -1076,6 +1076,17 @@ export default function App() {
     mainScrollRef.current?.scrollTo({ top: 0 });
   }, [activeTab, selectedBook, selectedChapter, verseModeActive]);
 
+  // Same issue, same fix, for the Catholic Classics library: picking a book
+  // and its "Select Chapter" grid are two different screens, but both live
+  // under subView === 'booksLibrary' (only selectedClassicBook flips
+  // between them), so the tab-switch scroll reset above never fires here --
+  // scrolling down the book list and tapping one opened the chapter grid
+  // already scrolled down to match.
+  useEffect(() => {
+    if (subView !== 'booksLibrary') return;
+    mainScrollRef.current?.scrollTo({ top: 0 });
+  }, [subView, selectedClassicBook]);
+
   // Remembers this chapter as "where they left off" for Home's Continue
   // Reading banner. Gated on verseModeActive specifically, not just
   // activeTab === 'bible': selectedBook/selectedChapter already hold a
